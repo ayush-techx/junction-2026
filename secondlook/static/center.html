@@ -765,7 +765,9 @@ async function loadModels() {
   const desc = {act: "Imitation learning from 198 recorded demonstrations. Picks the way people did.",
                 smolvla: "Vision-language-action model. Follows an instruction such as “the pink bowl”."};
   const opts = [{engine: "vision", name: "Vision pick", tag: "Recommended", d: "The depth camera finds every brick and the arm's own geometry plans the grasp. No training needed.",
-    m: cal ? `Calibrated to ${cal.mean_mm} mm` : "Not calibrated yet", on: M.engine === "vision"}]
+    m: cal ? `Calibrated to ${cal.mean_mm} mm` : "Not calibrated yet", on: M.engine === "vision"},
+    {engine: "vision_learn", name: "Vision pick · self-calibrating", tag: "New", d: "Vision pick that checks its own aim: every few bricks it sets the brick down, sees where it really is, and corrects itself.",
+    m: cal ? `${cal.pairs_used} self-checks so far · ${cal.mean_mm} mm` : "Learns while it sorts", on: M.engine === "vision_learn"}]
     .concat(M.learned.filter(x => x.name !== "ACT" || x.active).map(x => ({engine: "policy", id: x.id, name: x.name, tag: x.policy === "smolvla" ? "VLA" : "ACT",
       d: desc[x.policy] || "", m: `Trained ${String(x.created).slice(5, 16).replace("-", "/")}`, on: M.engine === "policy" && x.active})));
   $("m-pick").innerHTML = opts.map(o => `<button class="opt" role="radio" aria-checked="${o.on}" data-engine="${o.engine}" data-id="${esc(o.id || "")}">
