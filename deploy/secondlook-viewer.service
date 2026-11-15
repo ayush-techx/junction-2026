@@ -1,0 +1,17 @@
+# Public read-only viewer for the dashboard (port 8772). The tunnel (tailscale funnel) points here.
+# Copy to ~/.config/systemd/user/ and run: systemctl --user enable --now secondlook-viewer
+# WorkingDirectory assumes the repo is at ~/Downloads/secondlook; change it if you cloned elsewhere.
+[Unit]
+Description=SecondLook public read-only viewer (http://127.0.0.1:8772)
+After=secondlook-center.service
+Wants=secondlook-center.service
+
+[Service]
+WorkingDirectory=%h/Downloads/secondlook
+ExecStart=%h/physical-ai-studio/application/backend/.venv/bin/python -m secondlook.viewer 8772
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

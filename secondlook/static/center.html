@@ -194,6 +194,15 @@ td.num,th.num{text-align:right}
 #tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:6px 10px;font-size:13px;display:none;z-index:70;max-width:280px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:70;display:none;max-width:90vw}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+/* public view-only mode (secondlook/viewer.py, Netlify): controls hidden; the viewer also refuses every write */
+.pubtag,.pubnote{display:none}
+.pub .pubtag{display:inline-flex;align-items:center;padding:4px 10px;border:1px solid var(--line-2);border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--sunk);white-space:nowrap}
+.pub .pubnote{display:block;color:var(--ink-2);font-size:14px;margin-top:6px}
+.pub #go,.pub #stop,.pub #b-scan,.pub #b-describe,.pub #b-handfeed,.pub #prompt,.pub #l-fix,.pub #i-retrain,.pub #m-retrain,
+.pub #voice,.pub [data-ver],.pub [data-map]{display:none!important}
+.pub #map,.pub #t-warn,.pub .card:has(#tips),.pub .card:has(#m-versions){display:none!important}
+.pub .card:has(#ch-score),.pub .card:has(#m-defect){grid-column:1/-1}
+.pub [data-label]{pointer-events:none}.pub [data-label]:not(.sel){display:none}.pub .opt{pointer-events:none}
 </style>
 </head>
 <body>
@@ -209,6 +218,7 @@ td.num,th.num{text-align:right}
     <button role="tab" data-view="models" aria-selected="false">Models</button>
   </nav>
   <div class="right">
+    <span class="pubtag" id="pubtag" title="Public page: you can watch, not control">View only</span>
     <div class="status" id="status" role="status" aria-live="polite"><span class="dot" id="sdot"></span><span id="stext">Connecting</span></div>
     <button class="icon-btn" id="voice" aria-pressed="true" title="Voice on" aria-label="Voice">
       <svg class="i" viewBox="0 0 24 24" id="voice-on"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
@@ -226,6 +236,7 @@ td.num,th.num{text-align:right}
     <div>
       <h1>Sort every brick on the table</h1>
       <p>The arm picks each brick, the wrist camera checks it on the Intel GPU, and it lands in the pink bowl if good or the blue bowl if not.</p>
+      <p class="pubnote" id="pubnote">A public, view-only window into the SecondLook station at Junction 2026. Everything you see is computed live on one Intel Core Ultra laptop.</p>
     </div>
     <div class="actions">
       <button class="btn primary big" id="go"><svg class="i" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>Sort the table</button>
@@ -291,11 +302,11 @@ td.num,th.num{text-align:right}
       <div class="card">
         <div class="head"><h2>On this laptop</h2></div>
         <div class="facts">
-          <div class="fact"><div class="k">Inspection</div><div class="v" id="x-ins">12 ms</div></div>
-          <div class="fact"><div class="k">Pick model</div><div class="v" id="x-pol">9 ms</div></div>
+          <div class="fact"><div class="k">Inspection</div><div class="v" id="x-ins">–</div></div>
+          <div class="fact"><div class="k">Pick model</div><div class="v" id="x-pol">–</div></div>
           <div class="fact"><div class="k">Per brick</div><div class="v" id="x-cyc">–</div></div>
         </div>
-        <p class="sub" style="margin:12px 0 0">Intel Core Ultra · OpenVINO on the integrated GPU · no cloud</p>
+        <p class="sub" style="margin:12px 0 0" id="x-note">Intel Core Ultra · OpenVINO on the integrated GPU</p>
       </div>
     </div>
   </div>
@@ -353,7 +364,58 @@ td.num,th.num{text-align:right}
 <div id="tip"></div>
 <div class="toast" id="toast" role="status"></div>
 
+<script src="/config.js"></script>
 <script>
+/* Public view-only mode. window.SL_PUBLIC = {api, snapshot, built} comes from /config.js:
+   - the public viewer (secondlook/viewer.py) serves {api: ""}: live data from the same origin;
+   - the Netlify copy (./sl publish) serves {api: "https://<laptop>.ts.net", snapshot: "last/"}: live data
+     while the station is online, otherwise the snapshot taken by the last ./sl publish.
+   Writes never leave the page in this mode (and the viewer refuses them anyway). */
+const PUB = window.SL_PUBLIC || null;
+let pubOnline = true, pubRetry = 0;
+const pubSnap = p => PUB.snapshot + p.replace(/^\//, "").split("?")[0] + (p.startsWith("/api/") ? ".json" : "");
+function pubSet(on) {
+  if (!on) pubRetry = Date.now() + 15000;           // offline: try the station again every 15 s
+  if (on === pubOnline) return;
+  pubOnline = on;
+  document.getElementById("pubtag").textContent = on ? "View only · live" : "View only · offline";
+}
+function media(p) {
+  if (!PUB) return p;
+  p = p.replace("/img/full/", "/img/");              // full wrist frames are not public, the crop is
+  return pubOnline && PUB.api != null ? PUB.api + p : pubSnap(p);
+}
+if (PUB) {
+  document.documentElement.classList.add("pub");
+  if (PUB.api == null) pubOnline = false;            // no tunnel configured: snapshot only
+  document.getElementById("pubtag").textContent = pubOnline ? "View only · live" : "View only · offline";
+  const realFetch = window.fetch.bind(window);
+  const json = (obj, status) => new Response(JSON.stringify(obj), {status, headers: {"Content-Type": "application/json"}});
+  window.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    if (!url.startsWith("/")) return realFetch(input, init);
+    if (init && init.method && init.method !== "GET") return json({error: "View only: this is the public SecondLook dashboard."}, 403);
+    if (PUB.api != null && (pubOnline || Date.now() > pubRetry)) {
+      try {
+        const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 5000);
+        const r = await realFetch(PUB.api + url, {cache: "no-store", signal: ctl.signal});
+        clearTimeout(t);
+        if (r.status < 500 && r.status !== 404) { pubSet(true); return r; }
+      } catch (e) {}
+      pubSet(false);
+    }
+    if (!PUB.snapshot) return json({error: "station offline"}, 503);
+    const r = await realFetch(pubSnap(url), {cache: "no-cache"});
+    if (r.ok && url.startsWith("/api/history?")) {      // the snapshot holds every brick: filter like the server
+      const q = new URLSearchParams(url.split("?")[1]);
+      let rows = await r.json();
+      ["run", "truth", "verdict"].forEach(k => { const v = q.get(k); if (v) rows = rows.filter(x => x[k] === v); });
+      if (q.get("picked") === "1") rows = rows.filter(x => x.pick_ok !== 0 && x.pick_ok !== false);
+      return json(rows.slice(0, +(q.get("limit") || 200)), 200);
+    }
+    return r;
+  };
+}
 const $ = id => document.getElementById(id);
 const esc = t => String(t ?? "").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
 const RUNKIND = [[/^sort_label/, "Sort and label"], [/^sort/, "Table sort"], [/^handfed/, "Hand-fed"], [/^auto_eval|^calib_good/, "AI pick"],
@@ -488,6 +550,15 @@ async function poll() {
       const done = (c.good || 0) + (c.defective || 0), total = Math.max(L.table_start || 0, done + L.on_table);
       $("prog").hidden = !L.until_clear; $("prog-i").style.width = (total ? 100 * done / total : 0) + "%";
     } else if (!running) $("prog").hidden = true;
+    const tm = (s.model && s.model.timing) || {};       // last measured values; "–" until a run measures them
+    if (!L) {
+      $("x-ins").textContent = tm.anomaly_ms != null ? Math.round(tm.anomaly_ms) + " ms" : "–";
+      $("x-pol").textContent = tm.policy_ms != null ? Math.round(tm.policy_ms) + " ms" : "–";
+      $("x-cyc").textContent = tm.cycle_s != null ? Math.round(tm.cycle_s) + " s" : "–";
+    }
+    $("x-note").textContent = "Intel Core Ultra · OpenVINO on the integrated GPU · " +
+      (s.model && s.model.cloud ? "Gemini (cloud) only names defects for the voice" : "no cloud") +
+      (!L && tm.t ? ` · measured ${tm.t.slice(11)}` : !L ? " · times appear during a run" : "");
     if (L) {
       if (L.policy_ms != null) $("x-pol").textContent = Math.round(L.policy_ms) + " ms";
       if (L.anomaly_ms != null) $("x-ins").textContent = Math.round(L.anomaly_ms) + " ms";
@@ -495,10 +566,12 @@ async function poll() {
       renderLast(L);
       renderFeed(L.events || []);
     }
+    if (PUB && !pubOnline) { $("stext").textContent = "Station offline" + (PUB.built ? " · last data " + PUB.built : ""); $("sdot").className = "dot bad"; }
     renderStage(L);
-  } catch (e) { $("stext").textContent = "Reconnecting"; $("sdot").className = "dot bad"; }
+  } catch (e) { $("stext").textContent = PUB && !pubOnline ? "Station offline" : "Reconnecting"; $("sdot").className = "dot bad"; }
 }
 function setShot(src) {
+  src = media(src);
   $("l-img").innerHTML = `<img src="${src}" data-zoom="${src}" alt="Wrist camera view of the brick with the defect heat map">`;
   $("st-shot").innerHTML = `<img src="${src}" alt="Last brick inspected">`;
 }
@@ -523,7 +596,7 @@ async function lastFromHistory() {
   $("l-sub").textContent = hhmm(r.ts);
   // Idle: the feed shows the last bricks sorted.
   $("feed")._sig = "history";
-  $("feed").innerHTML = rows.map(x => `<li><time>${esc(hhmm(x.ts))}</time><span class="${x.final_bowl === "good" ? "ok" : "error"}">${x.final_bowl === "good" ? "Good brick, pink bowl" : "Defective brick, blue bowl"}</span></li>`).join("");
+  $("feed").innerHTML = rows.slice(0, 8).map(x => `<li><time>${esc(hhmm(x.ts))}</time><span class="${x.final_bowl === "good" ? "ok" : "error"}">${x.final_bowl === "good" ? "Good brick, pink bowl" : "Defective brick, blue bowl"}</span></li>`).join("");
   const last = rows.filter(x => x.run === r.run);
   $("n-good").textContent = last.filter(x => x.final_bowl === "good").length;
   $("n-bad").textContent = last.filter(x => x.final_bowl === "defective").length;
@@ -542,7 +615,8 @@ async function loadScene() {
     const r = s.report;
     if (!r) return;
     sceneM = s.mtime;
-    const age = s.age_s < 90 ? "just now" : s.age_s < 3600 ? `${Math.round(s.age_s / 60)} min ago` : "earlier";
+    const age = s.age_s < 90 ? "just now" : s.age_s < 3600 ? `${Math.round(s.age_s / 60)} min ago`
+      : "at " + new Date(s.mtime * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) + (s.age_s > 1800 ? " (old: press Scan)" : "");
     const bricks = r.brick_list || [];
     $("t-sub").textContent = `${bricks.length} brick${bricks.length === 1 ? "" : "s"} · scanned ${age}`;
     if (!(S && S.live && S.live.on_table != null)) $("n-table").textContent = bricks.length;
@@ -559,6 +633,7 @@ async function loadScene() {
 function drawMap() {
   const img = $("map-img"), wrap = $("map");
   wrap.querySelectorAll(".pdot").forEach(d => d.remove());
+  if (PUB) { img.hidden = true; $("map-empty").hidden = false; $("map-empty").textContent = "The table camera is not shown on the public page. The wrist camera view is on the right."; return; }
   if (!sceneM) return;
   const src = mapView === "picks" ? "latest_raw.jpg" : mapView;
   img.hidden = false; $("map-empty").hidden = true;
@@ -662,7 +737,7 @@ async function loadHistory() {
   const [, rows] = await api("/api/history?" + q);
   $("h-count").textContent = `${rows.length} brick${rows.length === 1 ? "" : "s"}`;
   $("htable").querySelector("tbody").innerHTML = rows.map(r => {
-    const photos = (r.photos || []).map(f => `<img loading="lazy" src="/img/${encodeURIComponent(f)}" data-zoom="/img/full/${encodeURIComponent(f)}" alt="Brick photo">`).join("");
+    const photos = (r.photos || []).map(f => `<img loading="lazy" src="${media("/img/" + encodeURIComponent(f))}" data-zoom="${media("/img/full/" + encodeURIComponent(f))}" alt="Brick photo">`).join("");
     const sc = r.score_v1, col = r.verdict === "good" ? "var(--good)" : r.verdict === "defective" ? "var(--bad)" : "var(--warn)";
     const score = sc == null ? "–" : `<span class="mini"><i style="width:${Math.min(100, sc * 100)}%;background:${col}"></i></span>${sc.toFixed(2)}${r.score_v2 != null ? ` <span class="sub">then ${r.score_v2.toFixed(2)}</span>` : ""}`;
     const bowl = r.final_bowl ? `<span class="res"><span class="swatch" style="background:${r.final_bowl === "good" ? "var(--pink)" : "var(--blue)"}"></span>${r.final_bowl === "good" ? "Good" : "Defective"}</span>${r.regrasps ? ' <span class="sub">after a second look</span>' : ""}` : "–";
@@ -700,7 +775,7 @@ async function loadModels() {
     toast(code === 200 ? "Saved. The next sort uses it." : (out.error || "Not saved")); loadModels();
   });
   const D = M.defect;
-  $("m-defect").innerHTML = `<dt>Model</dt><dd>PatchCore anomaly detection</dd><dt>Runs on</dt><dd>Intel GPU, OpenVINO fp16</dd>
+  $("m-defect").innerHTML = `<dt>Model</dt><dd>PatchCore anomaly detection</dd><dt>Runs on</dt><dd>${D.device === "GPU" ? "Intel GPU" : D.device === "NPU" ? "Intel NPU" : esc(D.device || "–")}, OpenVINO${/fp16|int8|fp32/.test(D.path || "") ? " " + D.path.match(/fp16|int8|fp32/)[0] : ""}</dd>
     <dt>Cut-off</dt><dd>${D.threshold} <span class="sub">(within ±${D.band} it takes a second look)</span></dd><dt>Trained</dt><dd>${esc(D.trained || "–")}</dd>
     <dt>Learns from</dt><dd>good bricks, plus every photo you label</dd>`;
   $("m-versions").innerHTML = D.versions.length ? D.versions.slice(0, 6).map(v => `<div class="ver"><span>${esc(v.when)} <span class="sub">cut-off ${v.threshold ?? "–"}</span></span><button class="btn sm" data-ver="${esc(v.id)}">Use this one</button></div>`).join("") : '<p class="sub">No earlier versions.</p>';

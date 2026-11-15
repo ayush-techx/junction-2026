@@ -49,3 +49,7 @@ junction2026_*/
 IMG*.jpg
 IMG*.webp
 .claude/
+
+# --- Public dashboard build (./sl publish) ---------------------------------
+/site/
+/site.new/

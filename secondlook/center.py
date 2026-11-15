@@ -120,6 +120,27 @@ def _yaml(path):
         return {}
 
 
+TIMING = ROOT / "runs" / "last_timing.json"
+
+
+def _remember_timing(live):
+    """Latest measured inference times (kept after the run ends, so the page never shows made-up numbers)."""
+    old = {}
+    try:
+        old = json.loads(TIMING.read_text())
+    except (OSError, ValueError):
+        pass
+    if live:
+        new = {k: live[k] for k in ("anomaly_ms", "policy_ms", "cycle_s") if live.get(k) is not None}
+        if new and any(old.get(k) != v for k, v in new.items()):
+            old.update(new, t=time.strftime("%Y-%m-%d %H:%M"))
+            try:
+                TIMING.write_text(json.dumps(old))
+            except OSError:
+                pass
+    return old or None
+
+
 def status():
     cfg = _yaml(ROOT / "secondlook" / "config.yaml")
     ins, pol = cfg.get("inspection", {}), cfg.get("policy", {})
@@ -149,6 +170,7 @@ def status():
                     cmd = ""
                 who = "SecondLook" if "secondlook" in cmd else "Studio" if "physicalai" in cmd else "other"
                 pid_list[i] = f"{who} ({pid})"
+    timing = _remember_timing(live)
     pol_path = pol.get("path") or ""
     pol_name = pol_path.split("models/")[-1].split("/")[0] if pol_path else None
     if pol_name and len(pol_name) == 36:      # Studio model id (uuid): show the short form
@@ -157,7 +179,8 @@ def status():
         "job": _job_state(), "live": live,
         "model": {"inspection": ins.get("model"), "threshold": ins.get("threshold"), "band": ins.get("band"),
                   "device": ins.get("device"), "policy": pol_name,
-                  "policy_task": pol.get("task")},
+                  "policy_task": pol.get("task"), "timing": timing,
+                  "cloud": bool((cfg.get("accessinspect") or {}).get("gemini"))},
         "data": {"good": cnt("data/bricks/good"), "defect": cnt("data/bricks/defect"),
                  "live_good": cnt("data/bricks_live/good"), "live_defect": cnt("data/bricks_live/defect")},
         "owners": owners, "time": time.strftime("%H:%M:%S"),
@@ -506,6 +529,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path in ("/", "/index.html"):
                 return self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
+            if path == "/config.js":                 # private control center: not the public view-only mode
+                return self._send(200, b"window.SL_PUBLIC = null;\n", "text/javascript; charset=utf-8")
             if path == "/access.js":
                 return self._send(200, PAGE.with_name("access.js").read_bytes(), "text/javascript; charset=utf-8")
             if path == "/api/aac":
