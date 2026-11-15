@@ -1,0 +1,4 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+01:23:24,auto_eval_0122,1,normal,defective,defective,defective,1,0,16.97,0.9551,,0.486,act,
+01:24:15,auto_eval_0122,2,normal,good,defective,defective,1,0,38.31,0.752,,0.486,act,
+01:24:51,auto_eval_0122,3,normal,,,,0,,,,,,act,

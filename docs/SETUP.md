@@ -9,19 +9,23 @@ Two Python environments are used, and `./sl` picks the right one for you:
 |---|---|---|
 | Studio backend venv | running the cell, dashboard, evaluation, benchmarks | `~/physical-ai-studio/application/backend/.venv` |
 | `anomalib-env` | training the anomaly model | created by `setup.sh` inside this folder |
+| `tts-env` | Piper offline voice | created by `setup.sh` inside this folder |
+| `accessinspect/.venv` | optional Ava voice + Gemini helper | created by `setup.sh` |
 
 ---
 
-## 1. Unpack and install (once, ~10 minutes)
+## 1. Clone and install (once, ~10 minutes)
 
 ```bash
-cd ~ && unzip secondlook.zip && cd ~/secondlook
+gh auth login                      # the repo and its model release are private
+gh repo clone ayush-techx/junction-2026 ~/secondlook && cd ~/secondlook
 ```
 ```bash
 ./setup.sh
 ```
 It installs the app libraries into the Studio venv, creates `anomalib-env`, installs the offline voice
-(`espeak-ng`), gives you serial-port access, and runs the test suite. It ends with `Done. Next step: ./sl check`.
+(Piper + `espeak-ng`), gives you serial-port access, downloads the trained models
+(`./tools/fetch_models.sh`, add `--all` for ACT 20ep and SmolVLA) and runs the test suite. It ends with `Done. Next step: ./sl check`.
 If it added you to the `dialout` group, log out and back in once.
 
 Test the speaker:
@@ -106,21 +110,24 @@ Clean the bricks afterwards.
 
 ## 6. Train, check, and switch on the model (~5 minutes)
 
-Train (about a minute on the CPU):
+The trained PatchCore model is already in `exports/` after `./tools/fetch_models.sh`. To retrain from the photos
+in `data/bricks` (a few minutes on the GPU):
 ```bash
-./sl train --root data/bricks --model padim
+./sl train --root data/bricks --model patchcore
 ```
-It ends with `done: exports/padim/fp16 and exports/padim/int8`.
+It ends with `done: exports/patchcore/fp16 ...`. During runs, photos you label G/D go to `data/bricks_live`;
+`./sl recalibrate` retrains with them and writes the new threshold into `config.yaml`. The previous model is
+kept in `exports_before_recal_*`; roll back from the Models tab of the control center.
 
 Score every photo, get the threshold, and save heatmap images for the README:
 ```bash
-./sl evaluate --model exports/padim/int8/weights/openvino/model.xml --root data/bricks --device NPU --overlays
+./sl evaluate --model exports/patchcore/fp16/weights/openvino/model.xml --root data/bricks --device GPU --overlays
 ```
 Copy the printed `threshold` and `band` into `config.yaml` (`inspection.threshold`, `inspection.band`) and set
-`inspection.model: exports/padim/int8/weights/openvino/model.xml`.
+`inspection.model: exports/patchcore/fp16/weights/openvino/model.xml`.
 
-If clean bricks get rejected, add more good photos or train with `--model patchcore`.
-If the NPU fails to load the model, use `--device GPU` (then `CPU`) and set the same in `inspection.device`.
+If clean bricks get rejected, add more good photos (robot-grasped ones matter most), then `./sl recalibrate`.
+Use `GPU`: on this laptop the NPU driver fails to compile the model (`ZE_RESULT_ERROR_UNKNOWN`).
 
 Check the model in the dashboard without the robot:
 ```bash
@@ -178,7 +185,7 @@ Results table (paste into the README):
 
 Speed and energy per device:
 ```bash
-./sl bench --models exports/padim/fp16/weights/openvino/model.xml exports/padim/int8/weights/openvino/model.xml --devices CPU GPU NPU
+./sl bench --models exports/patchcore/fp16/weights/openvino/model.xml --devices CPU GPU
 ```
 
 ---

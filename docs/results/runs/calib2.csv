@@ -1,0 +1,6 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+00:12:19,calib2,1,normal,,,,0,,,,,,handfed,
+00:12:40,calib2,2,normal,good,good,good,1,0,14.82,0.0747,,0.423,handfed,
+00:13:11,calib2,3,normal,defective,defective,defective,1,0,16.29,0.7954,,0.423,handfed,
+00:13:29,calib2,4,normal,good,good,good,1,0,14.29,0.2155,,0.423,handfed,
+00:13:48,calib2,5,normal,defective,defective,defective,1,0,15.22,0.8315,,0.423,handfed,

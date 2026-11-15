@@ -48,7 +48,7 @@ SecondLook
   ./sl voice                         test the speaker
   ./sl test                          run the test suite
 
-Full guide: INTEL_LAPTOP.md
+Full guide: docs/SETUP.md   Models: ./tools/fetch_models.sh
 EOF
     ;;
 esac
