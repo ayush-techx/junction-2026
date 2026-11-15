@@ -37,6 +37,11 @@ class IKTablePicker:
         self.place_by_vision = bool(sc.get("place_by_vision", False))
         self.drop_height_m = float(sc.get("drop_height_m", 0.09))
         self.learn = bool(sc.get("learn_from_putback", True))
+        # "Vision pick · self-calibrating" (station.picker: vision_learn): every Nth grasp, set the brick back
+        # down exactly where the gripper held it, see where it really is, learn the offset, then pick it again.
+        self.self_calib = (cfg.get("station") or {}).get("picker") == "vision_learn"
+        self.self_check_every = max(2, int(sc.get("self_check_every", 3)))
+        self._grasps, self._checking = 0, False
         self.bowl_colour = (cfg.get("bowls") or {"good": "pink", "defective": "blue"})
         self.ref = dict(DEFAULT_REF, **(self.he.data.get("ref") or {}))
         self.history = history                  # callable(**row) -> logs one pick attempt
@@ -187,7 +192,28 @@ class IKTablePicker:
         held = robot.holding()
         self.last_grip, self.last_held = grip, 1 if held else 0
         self._log(plan, "grasped" if held else "missed", grip)
+        if held and not getattr(self, "_checking", False):     # the re-pick inside a check is not a new brick
+            self._grasps = getattr(self, "_grasps", 0) + 1
+            if getattr(self, "self_calib", False) and self.learn and self._grasps % self.self_check_every == 1:
+                return self._self_check(robot, ui)
         return "grasped" if held else "missed"
+
+    def _self_check(self, robot, ui):
+        """Put the held brick down where it was grasped, re-scan (learns the offset), pick it again."""
+        if hasattr(ui, "event"):
+            ui.event("Checking my aim: putting the brick down to see where it really is", "info")
+        before = self.he.data.get("fit") or {}
+        self.put_back(robot)
+        self._checking = True
+        try:
+            out = self.pick(robot, ui)           # its scan learns from the put-back, then picks again
+        finally:
+            self._checking = False
+        after = self.he.data.get("fit") or {}
+        if hasattr(ui, "event") and after.get("mean_mm") is not None:
+            ui.event(f"Aim updated: {before.get('mean_mm', '?')} -> {after['mean_mm']} mm average error "
+                     f"({after.get('pairs_used', '?')} checks)", "ok")
+        return out
 
     def _log(self, plan, outcome, grip):
         b = plan["brick"]

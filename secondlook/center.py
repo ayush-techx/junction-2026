@@ -87,7 +87,7 @@ def picker_engine():
 
 def mode_args(mode):
     if mode in ("sort", "sort_label"):
-        base = ["run", "--scan"] if picker_engine() == "vision" else ["run"]
+        base = ["run", "--scan"] if picker_engine() in ("vision", "vision_learn") else ["run"]
         args = base + ["--auto", "--until-clear"]
         if mode == "sort_label":
             args += ["--eval", "--learn-every", "5"]
@@ -422,8 +422,8 @@ def select_picker(body):
     import re as _re
     text = _config_text()
     engine = body.get("engine")
-    if engine not in ("vision", "policy"):
-        return 400, {"error": "engine must be vision or policy"}
+    if engine not in ("vision", "vision_learn", "policy"):
+        return 400, {"error": "engine must be vision, vision_learn or policy"}
     if engine == "policy":
         m = next((x for x in models()["learned"] if x["id"] == body.get("id")), None)
         if not m:

@@ -326,3 +326,68 @@ class TestCycleExtras(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSelfCalibratingPick(unittest.TestCase):
+    """station.picker: vision_learn puts the first grasped brick back down, learns where it really is, re-picks."""
+
+    def _picker(self, self_calib):
+        from secondlook.handeye import HandEye
+        from secondlook.kinematics import Arm
+        from secondlook.precise import IKTablePicker
+        arm = Arm()
+        ref = {"shoulder_pan": -45, "shoulder_lift": 60, "elbow_flex": -60, "wrist_flex": 78, "wrist_roll": -57}
+        target = arm.tcp(ref)
+        R = np.array([[1.0, 0, 0], [0, -1, 0], [0, 0, -1]])
+        t = np.array([target[0], target[1], target[2] - 0.012 + 0.65])
+        he = HandEye({"plane": [0.0, 0.0, -1.0, 0.65], "K": K, "pairs": [], "R": R.tolist(), "t": t.tolist(), "ref": ref,
+                      "fit": {"mean_mm": 9.0, "pairs_used": 6}})
+        learned = []
+        he.add_pair = lambda cam, base, source, **kw: learned.append(source) or {"mean_mm": 4.0, "pairs_used": 7}
+        he.save = lambda *a, **k: None
+        p = IKTablePicker.__new__(IKTablePicker)
+        p.arm, p.he, p.ref, p.max_tilt, p.above_m = arm, he, ref, 35.0, 0.06
+        p.history, p.run, p.last_pick, p.prefer, p.last, p.expect = None, None, None, None, None, None
+        p.learn, p.self_calib, p.self_check_every, p._grasps, p._checking = True, self_calib, 3, 0, False
+        grasp_cam = he.to_cam(target)
+        brick = {"u": 320.0, "v": 240.0, "grasp_cam": grasp_cam.tolist(), "base": he.to_base(grasp_cam).tolist(),
+                 "long_axis_cam": [1.0, 0.0, 0.0], "elongated": True}
+        scans = []
+
+        def scan(robot, ui=None):
+            scans.append(1)
+            p._learn_from_putback([brick])
+            return None, [brick]
+        p.scan = scan
+        return p, FakeRobot(arm, target), learned, scans
+
+    class UI:
+        def __init__(self):
+            self.events = []
+
+        def show(self, **kw):
+            pass
+
+        def event(self, text, level="info"):
+            self.events.append(text)
+
+    def test_first_grasp_checks_aim_then_repicks(self):
+        p, robot, learned, scans = self._picker(True)
+        ui = self.UI()
+        self.assertEqual(p.pick(robot, ui), "grasped")
+        self.assertEqual([x for x in robot.log if x in ("open", "close")], ["open", "close", "open", "open", "close"])
+        self.assertEqual(learned, ["putback"])
+        self.assertEqual(len(scans), 2)
+        self.assertTrue(any("Aim updated" in e for e in ui.events))
+        # the next two grasps are normal, the 4th checks again
+        for n in (2, 3):
+            self.assertEqual(p.pick(robot, ui), "grasped")
+            self.assertEqual(learned, ["putback"])
+        p.pick(robot, ui)
+        self.assertEqual(learned, ["putback", "putback"])
+
+    def test_plain_vision_pick_never_puts_down(self):
+        p, robot, learned, scans = self._picker(False)
+        self.assertEqual(p.pick(robot, self.UI()), "grasped")
+        self.assertEqual(learned, [])
+        self.assertEqual(len(scans), 1)
