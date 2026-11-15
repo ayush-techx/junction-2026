@@ -97,7 +97,7 @@ def main():
     ap.add_argument("--deploy", action="store_true", help="upload site/ to Netlify after building")
     ap.add_argument("--viewer", default=f"http://127.0.0.1:{cfg.get('viewer_port', 8772)}")
     ap.add_argument("--api", default=cfg.get("api_url"), help="public URL of the viewer (Tailscale Funnel)")
-    ap.add_argument("--site", default=cfg.get("netlify_site"), help="Netlify site name or id")
+    ap.add_argument("--site", default=cfg.get("netlify_site"), help="Netlify project id (netlify sites:list)")
     ap.add_argument("--out", default=str(ROOT / "site"))
     a = ap.parse_args()
     try:
@@ -110,7 +110,7 @@ def main():
     if not a.deploy:
         print("Not uploaded. To publish: ./sl publish --deploy  (or drag the site/ folder onto app.netlify.com/drop)")
         return
-    cmd = ["npx", "--yes", "netlify-cli", "deploy", "--prod", "--dir", a.out]
+    cmd = ["npx", "--yes", "netlify-cli", "deploy", "--prod", "--no-build", "--dir", a.out]
     if a.site:
         cmd += ["--site", a.site]
     print("uploading to Netlify:", " ".join(cmd))
