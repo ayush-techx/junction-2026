@@ -53,7 +53,7 @@ scan:                              # table scan pick (./sl run --scan); calibrat
 bowls: {good: pink, defective: blue}
 
 station:
-  picker: vision                   # "Sort the table" uses: vision = depth + arm model; policy = learned model in policy.path
+  picker: vision_learn                   # "Sort the table" uses: vision = depth + arm model; policy = learned model in policy.path
 
 cycle:
   pick_retries: 1                  # retries after a missed grasp
@@ -78,6 +78,6 @@ power:
 public:                            # public read-only dashboard (docs/PUBLIC_DASHBOARD.md)
   viewer_port: 8772                # ./sl viewer; the tunnel points here, never at the control center (8770)
   api_url: https://intel-hp-omnibook-ultra-laptop-14t-kd000.tail112a8c.ts.net   # the tunnel URL, e.g. https://<laptop>.<tailnet>.ts.net (tailscale funnel status)
-  netlify_site: null               # Netlify site name, used by ./sl publish --deploy
+  netlify_site: 2647cc75-81e4-4af2-b3d4-578a641b9613   # Netlify project id of secondlook-junction.netlify.app (./sl publish --deploy)
 
 log_dir: runs
