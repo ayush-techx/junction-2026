@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SecondLook</title>
+<style>
+:root{--bg:#0e1116;--panel:#171b22;--line:#262c36;--fg:#eef1f6;--mut:#9aa4b2;--good:#22c55e;--bad:#ef4444;--warn:#f59e0b;--info:#60a5fa;--r:14px}
+@media (prefers-color-scheme: light){:root{--bg:#f4f6f9;--panel:#fff;--line:#e3e7ee;--fg:#111827;--mut:#5b6474}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}
+h1{font-size:20px;margin:0;font-weight:700}
+.badge{padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--line)}
+.live{color:var(--good)}.reconn{color:var(--warn)}.down{color:var(--bad)}
+.stage{margin-left:auto;font-weight:600;font-size:15px;color:var(--mut);text-align:right}
+main{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;padding:14px 16px;max-width:1400px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.verdict{display:flex;align-items:center;gap:16px;border-radius:var(--r);padding:18px;margin-bottom:12px;border:2px solid var(--line)}
+.verdict .big{font-size:40px;font-weight:800;letter-spacing:.5px}
+.verdict .icon{font-size:44px;width:56px;text-align:center}
+.v-good{border-color:var(--good)}.v-good .big,.v-good .icon{color:var(--good)}
+.v-defective{border-color:var(--bad)}.v-defective .big,.v-defective .icon{color:var(--bad)}
+.v-uncertain{border-color:var(--warn)}.v-uncertain .big,.v-uncertain .icon{color:var(--warn)}
+.bar{position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--good),var(--warn) 50%,var(--bad));margin:8px 0 4px}
+.bar .thr{position:absolute;top:-4px;width:2px;height:22px;background:var(--fg)}
+.bar .dot{position:absolute;top:-5px;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:var(--fg);border:3px solid var(--panel)}
+.small{font-size:13px;color:var(--mut)}
+img#view{width:100%;border-radius:10px;background:#000;min-height:200px;display:block}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+@media (max-width:600px){.grid{grid-template-columns:1fr 1fr}}
+.tile{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+.tile b{display:block;font-size:22px}
+.held1{color:var(--good)}.held0{color:var(--bad)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+button{font:inherit;font-weight:700;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--fg);padding:14px;cursor:pointer;min-height:56px}
+button:focus-visible{outline:3px solid var(--info);outline-offset:2px}
+button.stop{background:var(--bad);color:#fff;border-color:var(--bad);grid-column:1/-1;font-size:22px;min-height:72px}
+button.start{border-color:var(--good)}
+button.good{border-color:var(--good);color:var(--good)}button.bad{border-color:var(--bad);color:var(--bad)}
+.eval{outline:3px solid var(--warn);border-radius:12px;padding:8px;margin-bottom:12px}
+.kbd{font-family:ui-monospace,monospace;border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
+ul#log{list-style:none;margin:0;padding:0;max-height:330px;overflow:auto}
+ul#log li{padding:6px 4px;border-bottom:1px solid var(--line);font-size:14px}
+ul#log li time{color:var(--mut);font-variant-numeric:tabular-nums;margin-right:8px}
+.l-ok{color:var(--good)}.l-error{color:var(--bad)}.l-warn{color:var(--warn)}
+.counts{display:flex;gap:10px;margin:10px 0}
+.counts div{flex:1;text-align:center;border-radius:10px;padding:8px;border:1px solid var(--line)}
+.counts b{font-size:28px;display:block}
+progress{width:100%;height:12px}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<header>
+  <h1>SecondLook</h1>
+  <span id="conn" class="badge reconn" role="status">Connecting…</span>
+  <div class="stage" id="stage" aria-live="polite">Starting…</div>
+</header>
+<main>
+  <section>
+    <div id="verdict" class="verdict" aria-live="assertive">
+      <div class="icon" id="vicon">…</div>
+      <div style="flex:1">
+        <div class="big" id="vtext">Waiting</div>
+        <div class="bar" aria-hidden="true"><div class="thr" id="thr"></div><div class="dot" id="dot" style="display:none"></div></div>
+        <div class="small" id="vdetail">Score shows here after inspection. Left of the line = good, right = defective.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <img id="view" alt="Latest inspection photo with heatmap">
+      <div class="grid">
+        <div class="tile"><span class="small">Grasp (squeeze)</span><b id="held">–</b><span class="small" id="grip"></span></div>
+        <div class="tile"><span class="small">Score</span><b id="score">–</b><span class="small" id="band"></span></div>
+        <div class="tile"><span class="small">Speed</span><b id="speed">–</b><span class="small" id="dev"></span></div>
+        <div class="tile"><span class="small">Laptop</span><b id="temp">–</b><span class="small" id="watts"></span></div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="panel">
+      <div class="btns">
+        <button class="stop" id="b-stop" title="Stop now (S or Esc)">■ STOP <span class="kbd">S</span></button>
+        <button class="start" id="b-start" title="Start / next brick (Space)">▶ Start / Next <span class="kbd">Space</span></button>
+        <button id="b-skip" title="Skip (X)">Skip <span class="kbd">X</span></button>
+      </div>
+      <div id="evalbox" style="display:none" class="eval">
+        <div class="small" style="margin-bottom:6px">What was this brick really?</div>
+        <div class="btns" style="margin:0">
+          <button class="good" id="b-good">✔ Good <span class="kbd">G</span></button>
+          <button class="bad" id="b-bad">✖ Defective <span class="kbd">D</span></button>
+        </div>
+      </div>
+      <div class="small" style="margin:6px 0">Wrong result? Correct the last brick (saved for learning):</div>
+      <div class="btns">
+        <button class="good" id="b-fixgood">It was GOOD</button>
+        <button class="bad" id="b-fixbad">It was DEFECTIVE</button>
+      </div>
+      <div class="counts">
+        <div><span class="small">Good bowl</span><b class="l-ok" id="c-good">0</b></div>
+        <div><span class="small">Reject bowl</span><b class="l-error" id="c-bad">0</b></div>
+      </div>
+      <div id="learnbox" style="display:none;margin-bottom:10px">
+        <div class="small" id="learntext"></div>
+        <progress id="learnbar" max="5" value="0"></progress>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <b>What's happening</b>
+      <ul id="log" aria-live="polite"></ul>
+    </div>
+  </section>
+</main>
+<div class="sr" aria-live="assertive" id="sr"></div>
+<script>
+const $ = id => document.getElementById(id);
+let lastFrame = -1, lastVerdictKey = "", es = null, lastMsg = 0, pending = null, raf = 0, lastLog = "";
+const ICON = {good: "✔", defective: "✖", uncertain: "?"};
+const WORD = {good: "GOOD", defective: "DEFECTIVE", uncertain: "UNSURE"};
+const esc = t => String(t).replace(/[<>&]/g, c => ({"<": "&lt;", ">": "&gt;", "&": "&amp;"}[c]));
+
+function send(cmd) {
+  fetch("/cmd", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({cmd})})
+    .catch(() => setConn("down"));
+}
+function setConn(kind) {
+  const c = $("conn");
+  c.className = "badge " + (kind === "live" ? "live" : kind === "down" ? "down" : "reconn");
+  c.textContent = kind === "live" ? "● Live" : kind === "down" ? "● Offline: retrying" : "● Reconnecting…";
+}
+function render(s) {
+  if (!s || !Object.keys(s).length) return;
+  $("stage").textContent = s.stage || "";
+  const thr = s.thr ?? 0.5, band = s.band ?? 0;
+  $("thr").style.left = (Math.min(thr, 1) * 100) + "%";
+  const v = s.verdict;
+  $("verdict").className = "verdict" + (v ? " v-" + v : "");
+  $("vicon").textContent = v ? ICON[v] : "…";
+  $("vtext").textContent = v ? WORD[v] : "Waiting";
+  if (s.score != null) {
+    $("dot").style.display = "block";
+    $("dot").style.left = (Math.min(Math.max(s.score, 0), 1) * 100) + "%";
+    $("vdetail").textContent = `Score ${s.score.toFixed(2)} · threshold ${thr.toFixed(2)} (unsure ${(thr - band).toFixed(2)}–${(thr + band).toFixed(2)})`;
+    $("score").textContent = s.score.toFixed(2);
+  }
+  $("band").textContent = "threshold " + thr.toFixed(2);
+  const key = (v || "") + (s.score ?? "");
+  if (v && key !== lastVerdictKey) { $("sr").textContent = WORD[v] + ", score " + (s.score ?? 0).toFixed(2); lastVerdictKey = key; }
+  if (s.held != null) {
+    $("held").textContent = s.held ? "Held ✔" : "Empty ✖";
+    $("held").className = s.held ? "held1" : "held0";
+    $("grip").textContent = "gripper " + s.grip + (s.attempt ? " · try " + s.attempt : "");
+  }
+  $("speed").textContent = s.policy_ms != null ? Math.round(s.policy_ms) + " ms" : (s.anomaly_ms != null ? Math.round(s.anomaly_ms) + " ms" : "–");
+  $("dev").textContent = (s.anomaly_ms != null ? "inspect " + Math.round(s.anomaly_ms) + " ms · " : "") + (s.policy_dev || "") + "/" + (s.anomaly_dev || "");
+  $("temp").textContent = s.temp_c != null ? Math.round(s.temp_c) + " °C" : "–";
+  $("watts").textContent = s.watts != null ? s.watts.toFixed(1) + " W" : "";
+  $("c-good").textContent = s.counts?.good ?? 0; $("c-bad").textContent = s.counts?.defective ?? 0;
+  const evalMode = (s.stage || "").startsWith("EVAL");
+  // In hand-fed mode Space means "the brick is in the gripper": say so on the button.
+  const feeding = /^(PLACE A BRICK|NO BRICK IN)/.test(s.stage || "");
+  $("b-start").innerHTML = feeding ? '✔ Brick is in: close gripper <span class="kbd">Space</span>' : '▶ Start / Next <span class="kbd">Space</span>';
+  $("evalbox").style.display = evalMode ? "block" : "none";
+  if (s.learn) {
+    $("learnbox").style.display = "block";
+    $("learnbar").max = s.learn.every; $("learnbar").value = s.learn.since;
+    $("learntext").textContent = s.learn.training != null
+      ? `⟳ Learning in the background (${s.learn.training} s). Keep going: new weights load between bricks.`
+      : `Learning: ${s.learn.since}/${s.learn.every} new photos until the next retrain` + (s.learn.last ? ` · last retrain ${s.learn.last}` : "");
+  }
+  if (s.events) {
+    const sig = s.events.length + "|" + (s.events[0] ? s.events[0].t + s.events[0].text : "");
+    if (sig !== lastLog) { lastLog = sig; $("log").innerHTML = s.events.map(e => `<li class="l-${esc(e.level)}"><time>${esc(e.t)}</time>${esc(e.text)}</li>`).join(""); }
+  }
+  if (s.frame_version != null && s.frame_version !== lastFrame) { lastFrame = s.frame_version; $("view").src = "/frame.jpg?v=" + lastFrame; }
+  if (window.Access) Access.update(s);
+}
+function connect() {
+  if (es) es.close();
+  setConn("reconn");
+  es = new EventSource("/events");
+  es.onmessage = e => {
+    lastMsg = Date.now(); setConn("live");
+    if (e.data === "{}") return;                       // heartbeat, nothing changed
+    try { pending = JSON.parse(e.data); } catch (_) { return; }
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(pending); });
+  };
+  es.onerror = () => { setConn("reconn"); es.close(); setTimeout(connect, 1500); };
+}
+// Watchdog: the server sends at least every 2 s; silence for 6 s means reconnect (plus one fallback poll).
+setInterval(() => {
+  if (Date.now() - lastMsg > 6000) {
+    setConn("down"); connect();
+    fetch("/state", {cache: "no-store"}).then(r => r.json()).then(render).catch(() => {});
+  }
+}, 3000);
+$("b-stop").onclick = () => send("stop");
+$("b-start").onclick = () => send("start");
+$("b-skip").onclick = () => send("skip");
+$("b-good").onclick = () => send("good");
+$("b-bad").onclick = () => send("defective");
+$("b-fixgood").onclick = () => send("fix_good");
+$("b-fixbad").onclick = () => send("fix_defect");
+document.addEventListener("keydown", e => {
+  if (e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (k === "escape" || k === "s") send("stop");
+  else if (k === " ") { e.preventDefault(); send("start"); }
+  else if (k === "g") send("good");
+  else if (k === "d") send("defective");
+  else if (k === "x") send("skip");
+});
+connect();
+window.ACCESS_CMD = async c => {
+  const r = await fetch("/cmd", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({cmd: c})});
+  return r.json();
+};
+</script>
+<script src="/access.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# SecondLook runtime. Install into the Physical AI Studio backend venv, which already provides
+# torch, lerobot (SO-101 driver), physicalai (InferenceModel) and openvino:
+#   ~/physical-ai-studio/application/backend/.venv/bin/python -m pip install -r requirements.txt
+# (if that venv has no pip: cd ~/physical-ai-studio/application/backend && uv pip install -r <path>/requirements.txt)
+numpy
+opencv-python
+pillow
+pyyaml
+openvino
+# System packages (not pip): sudo apt install espeak-ng   # offline voice
+
+# Anomaly model training lives in its own venv (Intel's instructions):
+#   uv venv anomalib-env && source anomalib-env/bin/activate && uv pip install "anomalib[openvino,xpu]"

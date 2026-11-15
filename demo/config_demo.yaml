@@ -1,0 +1,52 @@
+# SecondLook cell configuration. Run `python -m secondlook.cell check` after every edit.
+
+robot:
+  port: /dev/serial/by-id/usb-1a86_USB_Single_Serial_5AE6082572-if00   # follower, by USB serial
+  id: follower                     # calibration id used when the arm was calibrated
+  calibration_dir: calibration            # MUST be the calibration Studio used, or joint values won't match the policy
+  use_degrees: false                # match Studio's setting (true/false); null = LeRobot default
+  poses_file: secondlook/poses.yaml   # written by `python -m secondlook.cell teach`
+  hz: 30                           # control rate
+  max_deg_per_s: 60                # speed limit for taught-pose moves
+  gripper:                         # measure with `check`, then fill in
+    open: null                     # gripper reading when fully open
+    close: null                    # command value used to close
+    hold_min: null                 # reading above this while closed = holding a brick
+    hold_max: null                 # reading below this = not fully open
+
+cameras:                           # names must match the names used when recording episodes
+  top:   {type: realsense, serial: "409522061795", width: 640, height: 480, fps: 30}
+  side:  {type: realsense, serial: "243622061531", width: 640, height: 480, fps: 30}
+  wrist: {type: opencv, path: /dev/v4l/by-id/usb-Sonix_Technology_Co.__Ltd._USB2.0_CAM1_USB2.0_CAM1-video-index0, width: 640, height: 480, fps: 30}
+
+policy:
+  path: null                       # PLACEHOLDER: exported OpenVINO policy folder (Modal-trained ACT)
+  device: GPU                      # informational; InferenceModel picks the backend from the export
+  cameras: [top, side, wrist]      # cameras the policy was trained with, same names
+  max_seconds: 15                  # give up a pick after this long
+  after_grasp_steps: 15            # keep running the policy this many steps after the grasp (lift), then hand over
+
+inspection:
+  camera: wrist                    # wrist camera sees the held brick close-up at a fixed offset
+  model: /home/intel/Downloads/secondlook/demo/exports/padim/int8/weights/openvino/model.xml
+  device: GPU                      # NPU, then GPU, then CPU if compile fails
+  roi: [100, 0, 440, 480]          # [x, y, w, h] crop around the held brick (same crop as the wrist_v0 set); retune from a `check` snapshot
+  threshold: 0.5                   # exported Anomalib scores are normalised; 0.5 = decision threshold
+  band: 0.08                       # +- uncertain zone; uncertain triggers the second look
+
+cycle:
+  pick_retries: 1                  # retries after a missed grasp
+  second_looks: 1                  # re-grasp + re-inspect rounds when uncertain
+
+ui:
+  mode: web                        # web = browser dashboard with buttons; window = plain OpenCV window
+  host: 127.0.0.1                  # dashboard only reachable from this laptop
+  port: 8765
+  open_browser: true
+  fullscreen: true                 # window mode only
+  voice: true                      # speak every result (needs espeak-ng)
+
+power:
+  idle_watts: null                 # measured by `check` with the arm idle; HUD shows watts above this
+
+log_dir: demo/runs

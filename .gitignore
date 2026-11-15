@@ -1,0 +1,67 @@
+.claude/
+__pycache__/
+data/
+runs/
+exports/
+*.zip
+junction2026_*/
+IMG*.jpg
+IMG*.webp
+accessinspect/.env
+accessinspect/.venv/
+
+# Python environments
+anomalib-env/
+.venv/
+venv/
+
+# Generated voice cache
+**/voice_cache/
+*.part
+
+# Backup files
+*.bak
+*.bak_*
+*.prev
+*.orig
+
+# Generated model exports
+exports/
+exports_*/
+exports_before_recal_*/
+
+# Model checkpoints and binaries
+**/weights/lightning/*.ckpt
+**/weights/openvino/*.bin
+
+# Python cache
+*.pyc
+__pycache__/
+
+
+# Virtual environments
+/anomalib-env/
+/.venv/
+/venv/
+
+# All generated model exports
+/exports*/
+/demo/exports/
+
+# Generated training results
+/results/
+/demo/results/
+
+# Model checkpoints
+*.ckpt
+*.bin
+
+# Generated caches
+**/voice_cache/
+*.part
+
+# Backups
+*.bak
+*.bak_*
+*.prev
+*.orig

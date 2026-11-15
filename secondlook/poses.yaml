@@ -1,0 +1,36 @@
+home:
+  shoulder_pan: -18.69
+  shoulder_lift: -98.51
+  elbow_flex: 97.5
+  wrist_flex: 77.33
+  wrist_roll: -56.9
+handoff:
+  shoulder_pan: -55.73
+  shoulder_lift: 5.77
+  elbow_flex: 43.07
+  wrist_flex: 27.67
+  wrist_roll: -73.71
+inspect:
+  shoulder_pan: -31.29
+  shoulder_lift: -38.48
+  elbow_flex: 45.84
+  wrist_flex: -9.74
+  wrist_roll: -65.23
+putback:
+  shoulder_pan: -55.64
+  shoulder_lift: -29.1
+  elbow_flex: 99.11
+  wrist_flex: -3.79
+  wrist_roll: -69.57
+bowl_good:
+  shoulder_pan: -71.9
+  shoulder_lift: 5.44
+  elbow_flex: 39.23
+  wrist_flex: -4.57
+  wrist_roll: -51.14
+bowl_defective:
+  shoulder_pan: -49.85
+  shoulder_lift: 73.52
+  elbow_flex: -64.08
+  wrist_flex: -4.57
+  wrist_roll: -51.56

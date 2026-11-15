@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SecondLook</title>
+<meta name="description" content="SecondLook sorting station: picks every brick on the table, inspects it on the Intel GPU and sorts good from defective.">
+<meta name="theme-color" content="#F7F7F5">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141414'/%3E%3Ccircle cx='13' cy='16' r='7' fill='none' stroke='%23fff' stroke-width='2.6'/%3E%3Ccircle cx='21' cy='16' r='4' fill='%23E8590C'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#F7F7F5;--surface:#FFFFFF;--sunk:#F1F0EC;--line:#E6E4DF;--line-2:#D6D3CC;
+  --ink:#141414;--ink-2:#57534E;--ink-3:#8A857D;
+  --accent:#E8590C;--accent-ink:#FFFFFF;--accent-soft:#FDEBDD;
+  --good:#1E7A45;--good-soft:#E3F2E8;--bad:#C9302C;--bad-soft:#FBE6E4;--warn:#B45309;--warn-soft:#FDF0DC;
+  --pink:#E8789E;--blue:#1C9AD6;
+  --chart-good:#3B7A57;--chart-bad:#D9480F;
+  --r:12px;
+  --font:"Ubuntu Sans","Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Ubuntu Sans Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E0E0F;--surface:#161618;--sunk:#1C1C1F;--line:#2A2A2E;--line-2:#38383D;
+  --ink:#F2F1EE;--ink-2:#B9B5AE;--ink-3:#85817A;--accent-soft:#3A1F10;
+  --good:#4CC27E;--good-soft:#14301F;--bad:#F06560;--bad-soft:#3A1715;--warn:#F2A33A;--warn-soft:#3A2810;
+  --chart-good:#5FB585;--chart-bad:#F07A3E;}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1}
+button,select,input{font:inherit;color:inherit}
+.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:8px;z-index:50;background:var(--surface);padding:8px 12px;border-radius:8px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line)}
+.top .in{max-width:1440px;margin:0 auto;padding:0 24px;min-height:60px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em;text-decoration:none;color:inherit}
+.brand svg{display:block}
+.tabs{display:flex;gap:2px;margin-left:12px}
+.tabs button{border:0;background:none;padding:8px 12px;border-radius:8px;color:var(--ink-2);font-weight:500;cursor:pointer;min-height:44px}
+.tabs button:hover{color:var(--ink);background:var(--sunk)}
+.tabs button[aria-selected="true"]{color:var(--ink);background:var(--sunk);font-weight:600}
+.right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.status{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:14px;color:var(--ink-2);background:var(--surface);max-width:380px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:36px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
+.dot.live{background:var(--accent);animation:pulse 1.6s infinite}
+.dot.ok{background:var(--good)}.dot.bad{background:var(--bad)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(232,89,12,.5)}70%{box-shadow:0 0 0 7px rgba(232,89,12,0)}100%{box-shadow:0 0 0 0 rgba(232,89,12,0)}}
+.icon-btn{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;cursor:pointer;transition:background .12s,transform .08s;color:inherit}
+.icon-btn:hover{background:var(--sunk)}.icon-btn:active{transform:translateY(1px)}
+.icon-btn[aria-pressed="false"]{color:var(--ink-3)}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface);font-weight:600;cursor:pointer;transition:background .12s,border-color .12s,transform .08s;white-space:nowrap}
+.btn:hover{background:var(--sunk)}.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:#CF4E09}
+.btn.big{min-height:56px;padding:0 24px;font-size:17px;border-radius:12px}
+.btn.stop{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn.stop:hover{background:#A92724}
+.btn.sm{min-height:36px;padding:0 12px;font-size:14px;border-radius:8px}
+.btn.ghost{border-color:transparent;background:none}
+.btn.ghost:hover{background:var(--sunk)}
+.btn.good{border-color:var(--good);color:var(--good)}.btn.good.sel{background:var(--good);color:#fff}
+.btn.bad{border-color:var(--bad);color:var(--bad)}.btn.bad.sel{background:var(--bad);color:#fff}
+
+main{max-width:1440px;margin:0 auto;padding:24px}
+.view[hidden]{display:none}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.c8{grid-column:span 8}.c4{grid-column:span 4}.c6{grid-column:span 6}.c12{grid-column:span 12}
+@media (max-width:1100px){.c8,.c4,.c6{grid-column:span 12}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.card h2{font-size:15px;font-weight:600;margin:0;letter-spacing:-.005em}
+.card .head{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.sub{color:var(--ink-3);font-size:14px}
+.muted{color:var(--ink-2)}
+.seg{display:inline-flex;background:var(--sunk);border-radius:9px;padding:3px;margin-left:auto}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:7px;font-size:14px;font-weight:500;color:var(--ink-2);cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:4px 0 20px;flex-wrap:wrap}
+.hero h1{font-size:30px;line-height:1.15;letter-spacing:-.025em;margin:0;font-weight:700}
+.hero p{margin:6px 0 0;color:var(--ink-2);max-width:640px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.progress{height:6px;background:var(--sunk);border-radius:99px;overflow:hidden;margin-top:12px}
+.progress[hidden]{display:none}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .4s}
+.map{position:relative;border-radius:10px;overflow:hidden;background:var(--sunk);aspect-ratio:4/3}
+.map img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.map img[hidden]{display:none}
+.empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-3);text-align:center;padding:24px}
+.empty[hidden]{display:none}
+.pdot{position:absolute;width:12px;height:12px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.pdot.grasped{background:var(--good)}.pdot.missed{background:#fff;border-color:var(--bad);border-width:3px}.pdot.slipped{background:var(--warn)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:var(--sunk);font-size:13px;color:var(--ink-2)}
+.chip i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.warnlist{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.warnlist:empty{display:none}
+.warnlist li{font-size:14px;padding:8px 12px;border-radius:8px;background:var(--warn-soft);color:var(--warn)}
+.bins{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bin{border:1px solid var(--line);border-radius:10px;padding:14px}
+.bin .n{font-size:48px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.bin .l{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-2);margin-bottom:10px}
+.swatch{width:12px;height:12px;border-radius:4px;display:inline-block;flex:none}
+.ontable{display:flex;align-items:baseline;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.ontable b{font-size:22px}
+.last{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.shot{position:relative;border-radius:10px;overflow:hidden;background:var(--sunk);aspect-ratio:2/1}
+.shot img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.verdict{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:20px;letter-spacing:-.01em}
+.verdict.good{color:var(--good)}.verdict.defective{color:var(--bad)}.verdict.uncertain{color:var(--warn)}
+.meter{position:relative;height:8px;border-radius:99px;background:linear-gradient(90deg,var(--good-soft),var(--bad-soft));margin-top:6px}
+.meter i{position:absolute;top:-4px;width:3px;height:16px;border-radius:2px;background:var(--ink);transform:translateX(-50%)}
+.meter b{position:absolute;top:-6px;width:14px;height:20px;border-radius:5px;transform:translateX(-50%);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line-2)}
+.meter-l{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);margin-top:8px}
+.prompt{border:1px solid var(--accent);background:var(--accent-soft);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.prompt[hidden]{display:none}
+.prompt b{font-size:17px}
+.feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.feed li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.feed li:first-child{border-top:0}
+.feed time{color:var(--ink-3);font-family:var(--mono);font-size:13px}
+.feed .ok{color:var(--good)}.feed .error{color:var(--bad)}.feed .warn{color:var(--warn)}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fact .k{font-size:13px;color:var(--ink-3)}.fact .v{font-size:20px;font-weight:600;letter-spacing:-.01em}
+@media (max-width:640px){.hero h1{font-size:24px}.top .in{padding:8px 16px}main{padding:16px}.tabs{margin-left:0;order:3;width:100%}.right{margin-left:auto}.status{max-width:180px}.btn.big{width:100%}.actions{width:100%}}
+
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:16px}
+@media (max-width:900px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi .k{font-size:14px;color:var(--ink-2)}
+.kpi .v{font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1.1;margin-top:6px}
+.kpi .s{font-size:13px;color:var(--ink-3);margin-top:4px}
+.chart{width:100%;overflow:hidden}
+.chart text{fill:var(--ink-3);font-size:12px;font-family:var(--font)}
+.chart .grid line{stroke:var(--line)}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--ink-2);flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
+select{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:0 10px;min-height:40px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-weight:500;color:var(--ink-3);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right}
+.thumbs{display:flex;gap:4px}
+.thumbs img{width:56px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:zoom-in;display:block}
+.res{display:inline-flex;align-items:center;gap:6px}
+.wrongtag{font-size:12px;font-weight:600;color:var(--bad);background:var(--bad-soft);padding:2px 8px;border-radius:99px;margin-left:6px}
+.scroll{overflow-x:auto}
+.mini{width:64px;height:6px;border-radius:99px;background:var(--sunk);position:relative;display:inline-block;vertical-align:middle;margin-right:8px}
+.mini i{position:absolute;inset:0 auto 0 0;border-radius:99px}
+.tips{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.tips li{padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px}
+
+.choice{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.opt{border:1px solid var(--line);border-radius:12px;padding:16px;cursor:pointer;background:var(--surface);text-align:left;transition:border-color .12s,background .12s,transform .08s;display:flex;flex-direction:column;gap:6px;min-height:150px}
+.opt:hover{border-color:var(--line-2);background:var(--sunk)}.opt:active{transform:translateY(1px)}
+.opt[aria-checked="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.opt .t{font-weight:600;font-size:16px;display:flex;align-items:center;gap:8px}
+.opt .d{font-size:14px;color:var(--ink-2)}
+.opt .m{margin-top:auto;font-size:13px;color:var(--ink-3)}
+.tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--sunk);color:var(--ink-2)}
+.tag.rec{background:var(--accent-soft);color:var(--accent)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14px;margin:0}
+.kv dt{color:var(--ink-3)}.kv dd{margin:0}
+.ver{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.ver:first-child{border-top:0}
+
+.stage{position:fixed;inset:0;z-index:40;background:#0B0B0C;color:#F2F1EE;display:grid;grid-template-rows:auto 1fr auto;padding:32px 48px;gap:24px}
+.stage[hidden]{display:none}
+.stage .bar{display:flex;align-items:center;gap:16px;font-size:18px;color:#9A968F}
+.stage .bar .brand{color:#F2F1EE;font-size:22px}
+.stage .body{display:grid;grid-template-columns:1.25fr 1fr;gap:40px;align-items:center;min-height:0}
+.stage .shot{border-radius:20px;background:#161618}
+.stage .word{font-size:clamp(48px,7vw,112px);font-weight:800;letter-spacing:-.04em;line-height:1;margin-top:20px}
+.stage .word.good{color:#4CC27E}.stage .word.defective{color:#F06560}.stage .word.uncertain{color:#F2A33A}
+.stage .counts{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.stage .cnt{background:#161618;border-radius:20px;padding:28px}
+.stage .cnt .n{font-size:clamp(64px,9vw,150px);font-weight:800;letter-spacing:-.05em;line-height:.95}
+.stage .cnt .l{display:flex;align-items:center;gap:10px;font-size:22px;color:#B9B5AE}
+.stage .cnt .swatch{width:18px;height:18px;border-radius:6px}
+.stage .cnt.wide{grid-column:span 2;display:flex;align-items:center;justify-content:space-between}
+.stage .cnt.wide .n{font-size:clamp(48px,6vw,96px)}
+.stage .ticker{font-size:22px;color:#85817A;display:flex;gap:28px;overflow:hidden;white-space:nowrap;min-height:32px}
+.stage .ticker span:first-child{color:#F2F1EE}
+@media (max-width:900px){.stage{padding:20px}.stage .body{grid-template-columns:1fr}}
+
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:60;cursor:zoom-out}
+#lightbox img{max-width:94vw;max-height:90vh;border-radius:12px}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:8px;padding:6px 10px;font-size:13px;display:none;z-index:70;max-width:280px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:70;display:none;max-width:90vw}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top"><div class="in">
+  <a class="brand" href="/" aria-label="SecondLook home">
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="currentColor"/><circle cx="13" cy="16" r="7" fill="none" stroke="var(--bg)" stroke-width="2.6"/><circle cx="21" cy="16" r="4" fill="#E8590C"/></svg>
+    SecondLook
+  </a>
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button role="tab" data-view="station" aria-selected="true">Station</button>
+    <button role="tab" data-view="insights" aria-selected="false">Insights</button>
+    <button role="tab" data-view="models" aria-selected="false">Models</button>
+  </nav>
+  <div class="right">
+    <div class="status" id="status" role="status" aria-live="polite"><span class="dot" id="sdot"></span><span id="stext">Connecting</span></div>
+    <button class="icon-btn" id="voice" aria-pressed="true" title="Voice on" aria-label="Voice">
+      <svg class="i" viewBox="0 0 24 24" id="voice-on"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+      <svg class="i" viewBox="0 0 24 24" id="voice-off" hidden><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
+    </button>
+    <button class="icon-btn" id="stagebtn" title="Stage view for the audience" aria-label="Stage view">
+      <svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    </button>
+  </div>
+</div></header>
+
+<main id="main">
+<section class="view" id="v-station">
+  <div class="hero">
+    <div>
+      <h1>Sort every brick on the table</h1>
+      <p>The arm picks each brick, the wrist camera checks it on the Intel GPU, and it lands in the pink bowl if good or the blue bowl if not.</p>
+    </div>
+    <div class="actions">
+      <button class="btn primary big" id="go"><svg class="i" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor"/></svg>Sort the table</button>
+      <button class="btn big stop" id="stop" hidden><svg class="i" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg>Stop</button>
+    </div>
+  </div>
+
+  <div class="prompt" id="prompt" hidden>
+    <b id="p-text"></b>
+    <div class="actions" id="p-actions" style="width:auto"></div>
+  </div>
+
+  <div class="grid">
+    <div class="c8 stack">
+      <div class="card">
+        <div class="head">
+          <h2>Table</h2><span class="sub" id="t-sub">No scan yet</span>
+          <div class="seg" role="group" aria-label="Map view">
+            <button data-map="latest.jpg" aria-pressed="true">Camera</button>
+            <button data-map="latest_height.jpg" aria-pressed="false">Height</button>
+            <button data-map="picks" aria-pressed="false">Picks</button>
+          </div>
+        </div>
+        <div class="map" id="map"><div class="empty" id="map-empty">Scan the table to see what is on it.</div><img id="map-img" alt="Top camera view of the table" hidden></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">
+          <div class="chips" id="t-chips"></div>
+          <div class="actions" style="margin-left:auto;width:auto">
+            <button class="btn sm" id="b-scan"><svg class="i" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><circle cx="12" cy="12" r="3"/></svg>Scan</button>
+            <button class="btn sm" id="b-describe"><svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>Describe</button>
+            <button class="btn sm" id="b-handfeed"><svg class="i" viewBox="0 0 24 24"><path d="M7 11V6a1.5 1.5 0 0 1 3 0v4M10 10V4.5a1.5 1.5 0 0 1 3 0V10M13 10V5.5a1.5 1.5 0 0 1 3 0V12M16 9.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1a6 6 0 0 1-5.2-3L4.5 13a1.5 1.5 0 0 1 2.5-1.6L8 13"/></svg>Hand-feed</button>
+          </div>
+        </div>
+        <ul class="warnlist" id="t-warn"></ul>
+      </div>
+      <div class="card">
+        <div class="head"><h2>What it is doing</h2></div>
+        <ul class="feed" id="feed"><li><time></time><span class="muted">Nothing yet. Press Sort the table.</span></li></ul>
+      </div>
+    </div>
+
+    <div class="c4 stack">
+      <div class="card">
+        <div class="head"><h2>Bowls</h2><span class="sub" id="b-sub">Last run</span></div>
+        <div class="bins">
+          <div class="bin"><div class="l"><span class="swatch" style="background:var(--pink)"></span>Good</div><div class="n" id="n-good">0</div></div>
+          <div class="bin"><div class="l"><span class="swatch" style="background:var(--blue)"></span>Defective</div><div class="n" id="n-bad">0</div></div>
+        </div>
+        <div class="ontable"><span class="muted">Still on the table</span><b id="n-table">–</b></div>
+        <div class="progress" id="prog" hidden><i id="prog-i"></i></div>
+      </div>
+      <div class="card">
+        <div class="head"><h2>Last brick</h2><span class="sub" id="l-sub"></span></div>
+        <div class="last">
+          <div class="shot" id="l-img"><div class="empty">No brick inspected yet</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span class="verdict" id="l-verdict">–</span><span class="sub" id="l-score"></span>
+          </div>
+          <div><div class="meter"><i id="l-thr" style="left:48.6%"></i><b id="l-pos" style="left:0;display:none"></b></div>
+          <div class="meter-l"><span>looks normal</span><span>looks defective</span></div></div>
+          <div class="actions" id="l-fix" hidden style="width:auto"><span class="sub">Wrong?</span><button class="btn sm good" data-fix="fix_good">It was good</button><button class="btn sm bad" data-fix="fix_defect">It was defective</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="head"><h2>On this laptop</h2></div>
+        <div class="facts">
+          <div class="fact"><div class="k">Inspection</div><div class="v" id="x-ins">12 ms</div></div>
+          <div class="fact"><div class="k">Pick model</div><div class="v" id="x-pol">9 ms</div></div>
+          <div class="fact"><div class="k">Per brick</div><div class="v" id="x-cyc">–</div></div>
+        </div>
+        <p class="sub" style="margin:12px 0 0">Intel Core Ultra · OpenVINO on the integrated GPU · no cloud</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="v-insights" hidden>
+  <div class="hero"><div><h1>How the station is doing</h1><p>Every brick is stored with its photos. Label the ones it got wrong and retrain: the defect model learns from real grasps.</p></div>
+    <div class="actions" style="width:auto"><button class="btn" id="i-retrain">Retrain the defect model</button></div></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid">
+    <div class="c6 card"><div class="head"><h2>Bricks sorted per run</h2><div class="legend" style="margin-left:auto"><span><i style="background:var(--chart-good)"></i>good bowl</span><span><i style="background:var(--chart-bad)"></i>defective bowl</span></div></div><div class="chart" id="ch-runs"></div></div>
+    <div class="c6 card"><div class="head"><h2>Sorting accuracy per run</h2><span class="sub">bricks with a true label</span></div><div class="chart" id="ch-acc"></div></div>
+    <div class="c8 card"><div class="head"><h2>Defect score of every labelled brick</h2><span class="sub">right of the line goes to the defective bowl</span></div><div class="chart" id="ch-score"></div></div>
+    <div class="c4 card"><div class="head"><h2>Next steps</h2></div><ul class="tips" id="tips"></ul></div>
+    <div class="c12 card">
+      <div class="head"><h2>History</h2><span class="sub" id="h-count"></span>
+        <div class="filters">
+          <select id="f-run" aria-label="Run"><option value="">All runs</option></select>
+          <select id="f-truth" aria-label="Label"><option value="">Any label</option><option value="none">Not labelled</option><option value="wrong">Wrong bowl</option><option value="good">Labelled good</option><option value="defective">Labelled defective</option></select>
+          <select id="f-verdict" aria-label="Result"><option value="">Any result</option><option value="good">Good</option><option value="uncertain">Not sure</option><option value="defective">Defective</option></select>
+        </div></div>
+      <div class="scroll"><table id="htable"><thead><tr><th>When</th><th>Run</th><th>Photos</th><th>Defect score</th><th>Bowl</th><th>True label</th><th class="num">Seconds</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="v-models" hidden>
+  <div class="hero"><div><h1>Models</h1><p>Everything runs on this laptop. Choose how the arm finds bricks and which defect model inspects them.</p></div></div>
+  <div class="grid">
+    <div class="c12 card"><div class="head"><h2>How the arm picks</h2><span class="sub">used by Sort the table</span></div><div class="choice" id="m-pick" role="radiogroup" aria-label="Pick engine"></div></div>
+    <div class="c6 card"><div class="head"><h2>Defect inspection</h2></div><dl class="kv" id="m-defect"></dl>
+      <div class="actions" style="margin-top:16px;width:auto"><button class="btn" id="m-retrain">Retrain with labelled photos</button></div></div>
+    <div class="c6 card"><div class="head"><h2>Earlier defect models</h2><span class="sub">roll back if a retrain made it worse</span></div><div id="m-versions"></div></div>
+  </div>
+</section>
+</main>
+
+<div class="stage" id="stage" hidden role="dialog" aria-label="Stage view">
+  <div class="bar"><span class="brand">SecondLook</span><span class="dot ok" id="st-dot"></span><span id="st-status">Ready</span><span style="margin-left:auto">Esc to close</span></div>
+  <div class="body">
+    <div>
+      <div class="shot" id="st-shot"></div>
+      <div class="word" id="st-word">Ready</div>
+    </div>
+    <div class="counts">
+      <div class="cnt"><div class="l"><span class="swatch" style="background:var(--pink)"></span>Good</div><div class="n" id="st-good">0</div></div>
+      <div class="cnt"><div class="l"><span class="swatch" style="background:var(--blue)"></span>Defective</div><div class="n" id="st-bad">0</div></div>
+      <div class="cnt wide"><div class="l">On the table</div><div class="n" id="st-table">–</div></div>
+    </div>
+  </div>
+  <div class="ticker" id="st-ticker"></div>
+</div>
+
+<div id="lightbox" role="dialog" aria-label="Photo"><img alt="Inspection photo"></div>
+<div id="tip"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? "").replace(/[<>&"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
+const RUNKIND = [[/^sort_label/, "Sort and label"], [/^sort/, "Table sort"], [/^handfed/, "Hand-fed"], [/^auto_eval|^calib_good/, "AI pick"],
+  [/^scan_auto/, "Vision pick"], [/^calib/, "Tuning"], [/^demo/, "Demo"], [/^table_auto/, "Self-calibration"]];
+const ENGINE = {handfed: "hand-fed", act: "AI pick", scan: "vision pick", fixed: "fixed spot"};
+const COLORS = {red: "#D83A2E", blue: "#1C7FD6", green: "#3E9B4F", yellow: "#E8B923", orange: "#EE7D22", pink: "#E8789E", white: "#E9E7E1", grey: "#8A857D", other: "#8A857D"};
+const runKind = r => (RUNKIND.find(([re]) => re.test(r || "")) || [0, "Run"])[1];
+const hhmm = ts => (ts || "").slice(11, 16);
+const runLabel = (run, ts) => `${runKind(run)}${ts ? " · " + hhmm(ts) : ""}`;
+const WORDS = {good: "Good", defective: "Defective", uncertain: "Not sure"};
+let view = "station", busy = false, S = null, lastFrame = null, mapView = "latest.jpg", sceneM = 0, picks = [];
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {cache: "no-store"});
+  const t = await r.text();
+  let j = {};
+  try { j = t ? JSON.parse(t) : {}; } catch (e) {}
+  return [r.status, j];
+}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 3800); }
+async function startMode(mode) {
+  const [code, out] = await api("/api/start", {mode});
+  if (code !== 200) toast(out.error || "Could not start");
+  poll();
+  return code === 200;
+}
+
+/* views */
+function show(v) {
+  view = v;
+  document.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-selected", b.dataset.view === v));
+  document.querySelectorAll(".view").forEach(el => el.hidden = el.id !== "v-" + v);
+  if (location.hash.slice(1) !== v) history.replaceState(null, "", "#" + v);
+  if (v === "insights") loadInsights(true);
+  if (v === "models") loadModels();
+  if (v === "station") loadScene();
+}
+document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => show(b.dataset.view));
+$("stagebtn").onclick = () => openStage(true);
+function openStage(on) {
+  $("stage").hidden = !on;
+  if (on) { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); history.replaceState(null, "", "#stage"); renderStage(S && S.live); }
+  else { if (document.fullscreenElement) document.exitFullscreen(); history.replaceState(null, "", "#" + view); }
+}
+
+/* pointer helpers */
+document.addEventListener("click", e => {
+  const z = e.target.closest("[data-zoom]");
+  if (z) { $("lightbox").querySelector("img").src = z.dataset.zoom; $("lightbox").style.display = "flex"; }
+});
+$("lightbox").onclick = () => $("lightbox").style.display = "none";
+document.addEventListener("mousemove", e => {
+  const t = e.target.closest("[data-tip]"), tip = $("tip");
+  if (!t) { tip.style.display = "none"; return; }
+  tip.textContent = t.dataset.tip; tip.style.display = "block";
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - 300) + "px"; tip.style.top = (e.clientY + 14) + "px";
+});
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input,select,textarea")) return;
+  if (e.key === "Escape") { $("lightbox").style.display = "none"; if (!$("stage").hidden) openStage(false); }
+  const p = $("prompt");
+  if (!p.hidden) {
+    const k = e.key === " " ? "space" : e.key.toLowerCase();
+    const b = p.querySelector(`[data-key="${k}"]`);
+    if (b) { e.preventDefault(); b.click(); }
+  }
+});
+
+/* voice */
+async function loadVoice() { const [, v] = await api("/api/voice"); setVoiceBtn(v.on !== false); }
+function setVoiceBtn(on) {
+  $("voice").setAttribute("aria-pressed", on); $("voice").title = on ? "Voice on" : "Voice off";
+  $("voice-on").hidden = !on; $("voice-off").hidden = on;
+}
+$("voice").onclick = async () => { const on = $("voice").getAttribute("aria-pressed") !== "true"; const [, v] = await api("/api/voice", {on}); setVoiceBtn(v.on); toast(v.on ? "Voice on" : "Voice off"); };
+
+/* station controls */
+$("go").onclick = () => startMode("sort");
+$("stop").onclick = async () => { const [code, out] = await api("/api/stop", {}); toast(code === 200 ? "Stopping. The motors go limp: hold the arm." : (out.error || "Nothing to stop")); };
+$("b-scan").onclick = async () => { if (await startMode("scene_check")) setTimeout(loadScene, 5000); };
+$("b-describe").onclick = async () => { const [code, out] = await api("/api/describe", {}); if (code !== 200) toast(out.error || "Could not describe the table"); else if (out.text) toast(out.text); else setTimeout(loadScene, 6000); };
+$("b-handfeed").onclick = () => startMode("handfed");
+document.querySelectorAll("[data-fix]").forEach(b => b.onclick = async () => { const [c] = await api("/api/live/cmd", {cmd: b.dataset.fix}); toast(c === 200 ? "Thanks. Saved for learning." : "No run is listening"); });
+document.querySelectorAll("[data-map]").forEach(b => b.onclick = () => {
+  mapView = b.dataset.map;
+  document.querySelectorAll("[data-map]").forEach(x => x.setAttribute("aria-pressed", x === b));
+  drawMap();
+});
+
+function setPrompt(text, buttons) {
+  const p = $("prompt");
+  if (!text) { p.hidden = true; p._sig = ""; return; }
+  const sig = text + buttons.map(b => b[0]).join();
+  if (p._sig === sig) return;
+  p._sig = sig; p.hidden = false; $("p-text").textContent = text;
+  $("p-actions").innerHTML = buttons.map(([label, cmd, cls, key]) => `<button class="btn ${cls || ""}" data-cmd="${cmd}" data-key="${key || ""}">${esc(label)}${key ? ` <span class="sub">${key === "space" ? "Space" : key.toUpperCase()}</span>` : ""}</button>`).join("");
+  $("p-actions").querySelectorAll("[data-cmd]").forEach(b => b.onclick = () => api("/api/live/cmd", {cmd: b.dataset.cmd}));
+}
+
+/* live */
+async function poll() {
+  try {
+    const [, s] = await api("/api/status");
+    S = s;
+    if (window.Access) Access.update(s.live || {});
+    const j = s.job, L = s.live, running = !!L, active = j.alive || (j.external && j.external.length);
+    busy = !!active;
+    let txt = "Ready", dot = "dot ok";
+    if (s.owners["follower arm"] === null) { txt = "Arm not connected"; dot = "dot bad"; }
+    if (running) {
+      txt = L.activity || "Running"; dot = "dot live";
+      if (L.on_table != null && L.until_clear && L.stage !== "SORTED") txt += ` · ${L.on_table} on the table`;
+      if (L.stage === "SORTED") { txt = "Table sorted"; dot = "dot ok"; }
+    } else if (j.alive) {
+      txt = {scene_check: "Scanning the table", describe: "Looking at the table", recalibrate: "Retraining the defect model", check_policy: "Checking the system"}[j.mode] || "Starting";
+      dot = "dot live";
+    } else if (j.exit != null && j.exit !== 0 && j.mode !== "describe" && j.mode !== "scene_check") { txt = "The last run stopped with a problem"; dot = "dot bad"; }
+    $("stext").textContent = txt; $("sdot").className = dot;
+    $("go").hidden = running; $("stop").hidden = !running;
+    $("go").disabled = busy;
+    ["b-scan", "b-handfeed", "i-retrain", "m-retrain"].forEach(id => $(id).disabled = busy);
+    const st = (L && L.stage) || "";
+    if (/^EVAL/.test(st)) setPrompt("Was this brick good?", [["Good", "good", "good", "g"], ["Defective", "defective", "bad", "d"], ["Skip", "skip", "ghost", "x"]]);
+    else if (/^(PLACE A BRICK|NO BRICK IN)/.test(st)) setPrompt("Put a brick between the fingers", [["Brick is in", "start", "primary", "space"]]);
+    else if (/^(READY|TABLE CLEAR)/.test(st)) setPrompt(/^TABLE/.test(st) ? "The table is clear. Put more bricks down." : "Ready when you are", [["Continue", "start", "primary", "space"]]);
+    else setPrompt(null);
+    const c = (L && L.counts) || null;
+    if (c) { $("n-good").textContent = c.good ?? 0; $("n-bad").textContent = c.defective ?? 0; }
+    $("b-sub").textContent = running ? "This run" : "Last run";
+    if (running && L.on_table != null) {
+      $("n-table").textContent = L.on_table;
+      const done = (c.good || 0) + (c.defective || 0), total = Math.max(L.table_start || 0, done + L.on_table);
+      $("prog").hidden = !L.until_clear; $("prog-i").style.width = (total ? 100 * done / total : 0) + "%";
+    } else if (!running) $("prog").hidden = true;
+    if (L) {
+      if (L.policy_ms != null) $("x-pol").textContent = Math.round(L.policy_ms) + " ms";
+      if (L.anomaly_ms != null) $("x-ins").textContent = Math.round(L.anomaly_ms) + " ms";
+      if (L.cycle_s != null) $("x-cyc").textContent = Math.round(L.cycle_s) + " s";
+      renderLast(L);
+      renderFeed(L.events || []);
+    }
+    renderStage(L);
+  } catch (e) { $("stext").textContent = "Reconnecting"; $("sdot").className = "dot bad"; }
+}
+function setShot(src) {
+  $("l-img").innerHTML = `<img src="${src}" data-zoom="${src}" alt="Wrist camera view of the brick with the defect heat map">`;
+  $("st-shot").innerHTML = `<img src="${src}" alt="Last brick inspected">`;
+}
+function setVerdict(v, score, thr) {
+  $("l-verdict").textContent = WORDS[v] || v; $("l-verdict").className = "verdict " + v;
+  if (score != null) {
+    $("l-score").textContent = "score " + score.toFixed(2);
+    const pos = $("l-pos"); pos.style.display = "block"; pos.style.left = (Math.min(1, score) * 100) + "%";
+    pos.style.background = v === "good" ? "var(--good)" : v === "defective" ? "var(--bad)" : "var(--warn)";
+  }
+  if (thr != null) $("l-thr").style.left = (thr * 100) + "%";
+}
+function renderLast(L) {
+  if (L.frame_version && L.frame_version !== lastFrame) { lastFrame = L.frame_version; setShot("/live/frame.jpg?v=" + lastFrame); }
+  if (L.verdict) { setVerdict(L.verdict, L.score, L.thr); $("l-fix").hidden = false; }
+}
+async function lastFromHistory() {
+  const [, rows] = await api("/api/history?limit=8&picked=1");
+  const r = rows[0]; if (!r) return;
+  if (r.photos && r.photos.length && !lastFrame) setShot("/img/" + encodeURIComponent(r.photos[r.photos.length - 1]));
+  if (r.verdict) setVerdict(r.verdict, r.score_v2 ?? r.score_v1, r.thr);
+  $("l-sub").textContent = hhmm(r.ts);
+  // Idle: the feed shows the last bricks sorted.
+  $("feed")._sig = "history";
+  $("feed").innerHTML = rows.map(x => `<li><time>${esc(hhmm(x.ts))}</time><span class="${x.final_bowl === "good" ? "ok" : "error"}">${x.final_bowl === "good" ? "Good brick, pink bowl" : "Defective brick, blue bowl"}</span></li>`).join("");
+  const last = rows.filter(x => x.run === r.run);
+  $("n-good").textContent = last.filter(x => x.final_bowl === "good").length;
+  $("n-bad").textContent = last.filter(x => x.final_bowl === "defective").length;
+}
+function renderFeed(events) {
+  const sig = events.length + (events[0] ? events[0].t + events[0].text : "");
+  if ($("feed")._sig === sig) return;
+  $("feed")._sig = sig;
+  $("feed").innerHTML = events.slice(0, 12).map(e => `<li><time>${esc((e.t || "").slice(0, 5))}</time><span class="${esc(e.level)}">${esc(e.text)}</span></li>`).join("") || '<li><time></time><span class="muted">Waiting</span></li>';
+}
+
+/* table map */
+async function loadScene() {
+  try {
+    const [, s] = await api("/api/scene");
+    const r = s.report;
+    if (!r) return;
+    sceneM = s.mtime;
+    const age = s.age_s < 90 ? "just now" : s.age_s < 3600 ? `${Math.round(s.age_s / 60)} min ago` : "earlier";
+    const bricks = r.brick_list || [];
+    $("t-sub").textContent = `${bricks.length} brick${bricks.length === 1 ? "" : "s"} · scanned ${age}`;
+    if (!(S && S.live && S.live.on_table != null)) $("n-table").textContent = bricks.length;
+    const by = {};
+    bricks.forEach(b => by[b.color || "other"] = (by[b.color || "other"] || 0) + 1);
+    $("t-chips").innerHTML = Object.entries(by).map(([c, n]) => `<span class="chip"><i style="background:${COLORS[c] || COLORS.other}"></i>${n} ${esc(c)}</span>`).join("");
+    $("t-warn").innerHTML = (r.warnings || []).filter(w => !/left in the bowls/.test(w))
+      .map(w => `<li>${esc(w.replace(/ at \(\d+, \d+\)/, "").replace(/: re-run .*$/, ": recalibrate before sorting").replace(/: put it back, or .*$/, ": put it back in its spot"))}</li>`).join("");
+    const [, p] = await api("/api/picks?limit=300");
+    picks = p;
+    drawMap();
+  } catch (e) {}
+}
+function drawMap() {
+  const img = $("map-img"), wrap = $("map");
+  wrap.querySelectorAll(".pdot").forEach(d => d.remove());
+  if (!sceneM) return;
+  const src = mapView === "picks" ? "latest_raw.jpg" : mapView;
+  img.hidden = false; $("map-empty").hidden = true;
+  img.onerror = () => { img.hidden = true; $("map-empty").hidden = false; $("map-empty").textContent = mapView === "latest_height.jpg" ? "No depth image in the last scan." : "No picture yet."; };
+  img.src = `/scene/${src}?t=${sceneM}`;
+  if (mapView !== "picks") return;
+  const place = () => {
+    if (!picks.length) { $("map-empty").hidden = false; $("map-empty").textContent = "No vision picks recorded yet."; return; }
+    picks.filter(x => x.u != null).forEach(x => {
+      const d = document.createElement("div");
+      d.className = "pdot " + x.outcome;
+      d.style.left = (x.u / 640 * 100) + "%"; d.style.top = (x.v / 480 * 100) + "%";
+      d.dataset.tip = `${x.outcome === "grasped" ? "Picked" : x.outcome === "missed" ? "Missed" : "Slipped"}${x.color ? " · " + x.color + " brick" : ""} · ${hhmm(x.ts)}`;
+      wrap.appendChild(d);
+    });
+  };
+  img.complete && img.naturalWidth ? place() : img.addEventListener("load", place, {once: true});
+}
+
+/* stage */
+function renderStage(L) {
+  if ($("stage").hidden) return;
+  $("st-good").textContent = $("n-good").textContent; $("st-bad").textContent = $("n-bad").textContent;
+  $("st-table").textContent = $("n-table").textContent;
+  $("st-status").textContent = $("stext").textContent;
+  $("st-dot").className = $("sdot").className;
+  const w = $("st-word");
+  if (L && L.verdict) { w.textContent = WORDS[L.verdict]; w.className = "word " + L.verdict; }
+  else { w.textContent = L ? (L.activity || "Working") : "Ready"; w.className = "word"; }
+  $("st-ticker").innerHTML = ((L && L.events) || []).slice(0, 3).map(e => `<span>${esc(e.text)}</span>`).join("");
+}
+
+/* insights */
+function bars(el, rows, {stack, max, fmt, tip}) {
+  const W = Math.max(300, el.clientWidth || 560), H = 220, l = 40, b = 28, t = 10, r = 8;
+  const n = rows.length; if (!n) { el.innerHTML = '<p class="sub">No runs yet.</p>'; return; }
+  const gap = (W - l - r) / n, bw = Math.min(36, gap * 0.6);
+  const mx = max || Math.max(1, ...rows.map(x => stack.reduce((a, k) => a + (x[k[0]] || 0), 0)));
+  const y = v => H - b - (v / mx) * (H - b - t);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img"><g class="grid">`;
+  [0, .5, 1].forEach(f => { s += `<line x1="${l}" x2="${W - r}" y1="${y(mx * f)}" y2="${y(mx * f)}"/><text x="${l - 6}" y="${y(mx * f) + 4}" text-anchor="end">${fmt(mx * f)}</text>`; });
+  s += "</g>";
+  rows.forEach((x, i) => {
+    const cx = l + gap * i + gap / 2; let acc = 0;
+    stack.forEach(([k, col], si) => {
+      const v = x[k] || 0; if (!v) return;
+      const y0 = y(acc), y1 = y(acc + v); acc += v;
+      const top = stack.slice(si + 1).every(([kk]) => !x[kk]);
+      s += `<path d="${roundTop(cx - bw / 2, y1, bw, Math.max(1, y0 - y1 - (si ? 2 : 0)), top ? 4 : 0)}" fill="${col}" data-tip="${esc(tip(x))}"/>`;
+    });
+    if (n <= 12 || i % 2 === 0) s += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${esc(hhmm(x.started))}</text>`;
+  });
+  el.innerHTML = s + "</svg>";
+}
+function roundTop(x, y, w, h, r) {
+  r = Math.min(r, w / 2, h);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+async function loadInsights(refreshRuns) {
+  try {
+    const [[, T], [, L]] = await Promise.all([api("/api/trends"), api("/api/learning")]);
+    const picked = T.reduce((a, r) => a + (r.picked || 0), 0), lab = T.reduce((a, r) => a + (r.labelled || 0), 0), cor = T.reduce((a, r) => a + (r.correct || 0), 0);
+    const nd = L.defect_scores.length, caught = L.threshold != null ? L.defect_scores.filter(x => x >= L.threshold).length : 0;
+    const fa = L.threshold != null ? L.good_scores.filter(x => x >= L.threshold).length : 0;
+    const lastCyc = [...T].reverse().find(r => r.cycle_s);
+    $("kpis").innerHTML = [
+      ["Bricks sorted", picked, `in ${T.length} runs`],
+      ["Sorted correctly", lab ? Math.round(100 * cor / lab) + "%" : "–", lab ? `${cor} of ${lab} labelled bricks` : "label bricks to measure"],
+      ["Defects caught", nd ? `${caught} of ${nd}` : "–", nd ? `${fa} false alarm${fa === 1 ? "" : "s"} on ${L.good_scores.length} good bricks` : ""],
+      ["Seconds per brick", lastCyc ? Math.round(lastCyc.cycle_s) : "–", lastCyc ? `median, last ${runKind(lastCyc.run).toLowerCase()} run` : ""],
+    ].map(([k, v, s]) => `<div class="card kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${esc(s)}</div></div>`).join("");
+    bars($("ch-runs"), T.slice(-14), {stack: [["good", "var(--chart-good)"], ["defective", "var(--chart-bad)"]], fmt: v => Math.round(v),
+      tip: x => `${runLabel(x.run, x.started)}: ${x.good || 0} good, ${x.defective || 0} defective`});
+    const accRows = T.filter(r => r.labelled).slice(-14).map(r => Object.assign({}, r, {pct: 100 * r.correct / r.labelled}));
+    bars($("ch-acc"), accRows, {stack: [["pct", "var(--ink-2)"]], max: 100, fmt: v => Math.round(v) + "%",
+      tip: x => `${runLabel(x.run, x.started)}: ${x.correct} of ${x.labelled} correct`});
+    strip(L);
+    $("tips").innerHTML = (L.tips || []).map(t => `<li>${esc(t)}</li>`).join("") || "<li>Nothing urgent. Keep sorting and labelling.</li>";
+    if (refreshRuns) {
+      const [, runs] = await api("/api/history/runs"), sel = $("f-run"), cur = sel.value;
+      sel.innerHTML = '<option value="">All runs</option>' + runs.map(r => `<option value="${esc(r.run)}" ${r.run === cur ? "selected" : ""}>${esc(runLabel(r.run, r.last))}</option>`).join("");
+    }
+    loadHistory();
+  } catch (e) { console.error(e); }
+}
+function strip(L) {
+  const el = $("ch-score"), W = Math.max(300, el.clientWidth || 700), H = 150, x0 = 100, x1 = W - 16;
+  const X = v => x0 + Math.max(0, Math.min(1, v)) * (x1 - x0), ng = L.good_scores.length, nd = L.defect_scores.length;
+  if (!ng && !nd) { el.innerHTML = '<p class="sub">Label bricks in History to see how well good and defective bricks separate.</p>'; return; }
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Defect scores by true label"><g class="grid"><line x1="${x0}" x2="${x1}" y1="${H - 22}" y2="${H - 22}"/></g>`;
+  [0, .25, .5, .75, 1].forEach(t => s += `<text x="${X(t)}" y="${H - 6}" text-anchor="middle">${t}</text>`);
+  [["Good", L.good_scores, 42, "var(--chart-good)"], ["Defective", L.defect_scores, 92, "var(--chart-bad)"]].forEach(([name, arr, yy, col]) => {
+    s += `<text x="0" y="${yy + 4}" style="fill:var(--ink-2);font-size:13px">${name} (${arr.length})</text>`;
+    arr.forEach((v, i) => s += `<circle cx="${X(v)}" cy="${yy + ((i % 5) - 2) * 3.5}" r="5.5" fill="${col}" stroke="var(--surface)" stroke-width="2" data-tip="${name} brick · score ${v.toFixed(2)}"/>`);
+  });
+  if (L.threshold != null) s += `<line x1="${X(L.threshold)}" x2="${X(L.threshold)}" y1="16" y2="${H - 22}" stroke="var(--ink)" stroke-width="2"/><text x="${X(L.threshold) + 6}" y="14" style="fill:var(--ink)">cut-off ${L.threshold}</text>`;
+  el.innerHTML = s + "</svg>";
+}
+async function loadHistory() {
+  const q = new URLSearchParams({run: $("f-run").value, truth: $("f-truth").value, verdict: $("f-verdict").value, picked: "1", limit: 200});
+  const [, rows] = await api("/api/history?" + q);
+  $("h-count").textContent = `${rows.length} brick${rows.length === 1 ? "" : "s"}`;
+  $("htable").querySelector("tbody").innerHTML = rows.map(r => {
+    const photos = (r.photos || []).map(f => `<img loading="lazy" src="/img/${encodeURIComponent(f)}" data-zoom="/img/full/${encodeURIComponent(f)}" alt="Brick photo">`).join("");
+    const sc = r.score_v1, col = r.verdict === "good" ? "var(--good)" : r.verdict === "defective" ? "var(--bad)" : "var(--warn)";
+    const score = sc == null ? "–" : `<span class="mini"><i style="width:${Math.min(100, sc * 100)}%;background:${col}"></i></span>${sc.toFixed(2)}${r.score_v2 != null ? ` <span class="sub">then ${r.score_v2.toFixed(2)}</span>` : ""}`;
+    const bowl = r.final_bowl ? `<span class="res"><span class="swatch" style="background:${r.final_bowl === "good" ? "var(--pink)" : "var(--blue)"}"></span>${r.final_bowl === "good" ? "Good" : "Defective"}</span>${r.regrasps ? ' <span class="sub">after a second look</span>' : ""}` : "–";
+    const wrong = r.truth && r.final_bowl && r.truth !== r.final_bowl;
+    const lab = `<button class="btn sm good ${r.truth === "good" ? "sel" : ""}" data-label="good" data-id="${r.id}">Good</button>
+      <button class="btn sm bad ${r.truth === "defective" ? "sel" : ""}" data-label="defective" data-id="${r.id}">Defective</button>${wrong ? '<span class="wrongtag">wrong bowl</span>' : ""}`;
+    const how = ENGINE[r.policy] ? ` <span class="sub">${ENGINE[r.policy]}</span>` : "";
+    return `<tr><td>${esc((r.ts || "").slice(5, 10).replace("-", "/"))} ${esc(hhmm(r.ts))}</td><td>${esc(runKind(r.run))}${how}</td><td><div class="thumbs">${photos || '<span class="sub">–</span>'}</div></td>
+      <td>${score}</td><td>${bowl}</td><td>${lab}</td><td class="num">${r.cycle_s != null ? Math.round(r.cycle_s) : "–"}</td></tr>`;
+  }).join("") || '<tr><td colspan="7" class="sub">Nothing here yet.</td></tr>';
+}
+["f-run", "f-truth", "f-verdict"].forEach(id => $(id).onchange = loadHistory);
+$("htable").addEventListener("click", async e => {
+  const b = e.target.closest("[data-label]"); if (!b) return;
+  const [code, out] = await api("/api/history/label", {id: +b.dataset.id, truth: b.dataset.label});
+  toast(code === 200 ? "Label saved. This photo now teaches the defect model." : (out.error || "Not saved"));
+  loadInsights(false);
+});
+$("i-retrain").onclick = async () => { if (await startMode("recalibrate")) toast("Retraining in the background"); };
+
+/* models */
+async function loadModels() {
+  const [, M] = await api("/api/models");
+  const cal = M.vision.calibration;
+  const desc = {act: "Imitation learning from 198 recorded demonstrations. Picks the way people did.",
+                smolvla: "Vision-language-action model. Follows an instruction such as “the pink bowl”."};
+  const opts = [{engine: "vision", name: "Vision pick", tag: "Recommended", d: "The depth camera finds every brick and the arm's own geometry plans the grasp. No training needed.",
+    m: cal ? `Calibrated to ${cal.mean_mm} mm` : "Not calibrated yet", on: M.engine === "vision"}]
+    .concat(M.learned.filter(x => x.name !== "ACT" || x.active).map(x => ({engine: "policy", id: x.id, name: x.name, tag: x.policy === "smolvla" ? "VLA" : "ACT",
+      d: desc[x.policy] || "", m: `Trained ${String(x.created).slice(5, 16).replace("-", "/")}`, on: M.engine === "policy" && x.active})));
+  $("m-pick").innerHTML = opts.map(o => `<button class="opt" role="radio" aria-checked="${o.on}" data-engine="${o.engine}" data-id="${esc(o.id || "")}">
+      <span class="t">${esc(o.name)} <span class="tag ${o.tag === "Recommended" ? "rec" : ""}">${esc(o.tag)}</span></span><span class="d">${esc(o.d)}</span><span class="m">${esc(o.m)}</span></button>`).join("");
+  $("m-pick").querySelectorAll(".opt").forEach(b => b.onclick = async () => {
+    const [code, out] = await api("/api/models/picker", {engine: b.dataset.engine, id: b.dataset.id || undefined});
+    toast(code === 200 ? "Saved. The next sort uses it." : (out.error || "Not saved")); loadModels();
+  });
+  const D = M.defect;
+  $("m-defect").innerHTML = `<dt>Model</dt><dd>PatchCore anomaly detection</dd><dt>Runs on</dt><dd>Intel GPU, OpenVINO fp16</dd>
+    <dt>Cut-off</dt><dd>${D.threshold} <span class="sub">(within ±${D.band} it takes a second look)</span></dd><dt>Trained</dt><dd>${esc(D.trained || "–")}</dd>
+    <dt>Learns from</dt><dd>good bricks, plus every photo you label</dd>`;
+  $("m-versions").innerHTML = D.versions.length ? D.versions.slice(0, 6).map(v => `<div class="ver"><span>${esc(v.when)} <span class="sub">cut-off ${v.threshold ?? "–"}</span></span><button class="btn sm" data-ver="${esc(v.id)}">Use this one</button></div>`).join("") : '<p class="sub">No earlier versions.</p>';
+  $("m-versions").querySelectorAll("[data-ver]").forEach(b => b.onclick = async () => { const [code, out] = await api("/api/models/defect", {id: b.dataset.ver}); toast(code === 200 ? "Rolled back. The next run uses it." : (out.error || "Not changed")); loadModels(); });
+}
+$("m-retrain").onclick = async () => { if (await startMode("recalibrate")) toast("Retraining in the background"); };
+
+/* boot */
+loadVoice(); poll().then(() => { if (!(S && S.live)) lastFromHistory(); }); loadScene();
+setInterval(poll, 900);
+setInterval(() => { if (view === "station") loadScene(); else if (view === "insights" && !busy) loadInsights(false); }, 6000);
+{
+  const h = location.hash.slice(1);
+  if (h === "stage") { show("station"); openStage(true); }
+  else if (["insights", "models"].includes(h)) show(h);
+}
+window.ACCESS_CMD = c => api("/api/live/cmd", {cmd: c});
+</script>
+<script src="/access.js"></script>
+</body>
+</html>

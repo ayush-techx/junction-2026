@@ -1,0 +1,78 @@
+# SecondLook cell configuration. Run `python -m secondlook.cell check` after every edit.
+
+robot:
+  port: /dev/serial/by-id/usb-1a86_USB_Single_Serial_5AE6082572-if00   # follower, by USB serial
+  id: follower                     # calibration id used when the arm was calibrated
+  calibration_dir: calibration            # MUST be the calibration Studio used, or joint values won't match the policy
+  use_degrees: false                # match Studio's setting (true/false); null = LeRobot default
+  poses_file: secondlook/poses.yaml   # written by `python -m secondlook.cell teach`
+  hz: 30                           # control rate
+  max_deg_per_s: 60                # speed limit for taught-pose moves
+  gripper:                         # measure with `check`, then fill in
+    open: 95                     # gripper reading when fully open
+    close: 0                    # command value used to close
+    hold_min: 5                 # reading above this while closed = holding a brick
+    hold_max: 60                 # reading below this = not fully open
+
+cameras:                           # names must match the names used when recording episodes
+  top:   {type: realsense, serial: "409522061795", width: 640, height: 480, fps: 30, depth: true}   # depth = precise table pick
+  side:  {type: realsense, serial: "243622061531", width: 640, height: 480, fps: 30}
+  wrist: {type: opencv, path: /dev/v4l/by-id/usb-Sonix_Technology_Co.__Ltd._USB2.0_CAM1_USB2.0_CAM1-video-index0, width: 640, height: 480, fps: 30}
+
+policy:
+  path: /home/intel/.local/share/physicalai/models/918242dc-9a06-48fa-9c45-b5890e428a94/exports/openvino                       # PLACEHOLDER: exported OpenVINO policy folder (Modal-trained ACT)
+  device: GPU                      # where the pick model runs (GPU = Intel iGPU, ~18x faster than CPU for SmolVLA)
+  cameras: [top, side, wrist]      # cameras the policy was trained with, same names
+  max_seconds: 15                  # give up a pick after this long
+  task: "pick up the brick and place it in the pink bowl"                       # SmolVLA only, e.g. "pick up the brick and place it in the pink bowl"; ACT ignores it
+  start_pose: {shoulder_pan: -31, shoulder_lift: -7, elbow_flex: 13, wrist_flex: 67, wrist_roll: -60}  # median start of the 198 recorded demos
+  replan_steps: 30                 # play this many actions from each predicted chunk, then ask the model again
+  image_map: {}                    # only if the model's camera names differ, e.g. {images.camera1: top}
+  after_grasp_steps: 15            # keep running the policy this many steps after the grasp (lift), then hand over
+
+inspection:
+  camera: wrist                    # wrist camera sees the held brick close-up at a fixed offset
+  model: exports/patchcore/fp16/weights/openvino/model.xml                      # PLACEHOLDER: exports/padim/int8/weights/openvino/model.xml
+  device: GPU                      # NPU, then GPU, then CPU if compile fails
+  roi: [170, 240, 300, 240]          # [x, y, w, h] crop around the held brick (same crop as the wrist_v0 set); retune from a `check` snapshot
+  threshold: 0.486                   # exported Anomalib scores are normalised; 0.5 = decision threshold
+  band: 0.08                       # +- uncertain zone; uncertain triggers the second look
+
+  secondary_model: exports/patchcore_live/fp16/weights/openvino/model.xml
+  secondary_threshold: 0.4481467009
+  secondary_band: 0.0310167670
+
+scan:                              # table scan pick (./sl run --scan); calibrate: ./sl table --from-map, then --auto
+  method: ik                       # ik = depth + arm kinematics (secondlook/handeye.yaml); map = old pixel->joints map
+  above_m: 0.06                    # approach / lift height above the brick
+  max_tilt_deg: 35                 # how far the wrist may lean from straight down to reach a brick
+  learn_from_putback: true         # a second look's put-back brick teaches the calibration
+  place_by_vision: false           # true = drop into the bowl where the camera sees it (bowls drift); false = taught pose
+  drop_height_m: 0.09              # release height above the table for place_by_vision
+
+bowls: {good: pink, defective: blue}
+
+station:
+  picker: vision                   # "Sort the table" uses: vision = depth + arm model; policy = learned model in policy.path
+
+cycle:
+  pick_retries: 1                  # retries after a missed grasp
+  second_looks: 1                  # re-grasp + re-inspect rounds when uncertain
+
+ui:
+  mode: web                        # web = browser dashboard with buttons; window = plain OpenCV window
+  host: 127.0.0.1                  # dashboard only reachable from this laptop
+  port: 8765
+  open_browser: true
+  fullscreen: true                 # window mode only
+  voice: true                      # speak every result (Ava via accessinspect/, else Piper, else espeak-ng)
+
+accessinspect:                     # teammate module in accessinspect/ (own venv, key in accessinspect/.env)
+  gemini: true                     # Gemini looks at each brick photo: names the defect + colour for the voice
+                                   # and the log. Advisory only, PatchCore decides the bowl. Sends the crop to Google.
+  wait_s: 3.0                      # after placing, wait at most this long for its answer
+
+power:
+  idle_watts: null                 # measured by `check` with the arm idle; HUD shows watts above this
+
+log_dir: runs
