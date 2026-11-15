@@ -1,8 +1,12 @@
-# SecondLook
+# SecondLook: Accessible Robotic Inspection
 
-**A low-cost SO-101 arm that finds bricks on a table, holds each one up to the camera on its own gripper,
-spots defects it was never shown, and sorts them into a good bowl and a reject bowl. Every decision runs on
-one Intel Core Ultra laptop.**
+**A robotic inspection station that helps blind, deaf, hard-of-hearing and nonspeaking people do inspection
+work more independently.** A low-cost SO-101 arm finds bricks on a table, holds each one up to the camera on
+its own gripper, spots defects it was never shown, and sorts them into a good bowl and a reject bowl. Every
+result is spoken, shown on screen, and can be controlled by touch or keyboard. Every decision runs on one
+Intel Core Ultra laptop.
+
+**Your work. Your way.**
 
 Built at Junction 2026 for the **Ignite Next × Intel Physical AI Challenge**.
 
@@ -28,12 +32,23 @@ anomaly model lights up a marked brick (score 0.83, rejected) and stays dark on 
 *The control center's Station view: one button sorts the whole table. The top camera marks each brick and both
 bowls; the last brick's wrist photo, verdict and defect score sit on the right.*
 
+## The problem
+
+Inspection work usually depends on seeing small defects, hearing alerts, or communicating verbally. That
+shuts out many blind, low-vision, deaf, hard-of-hearing and nonspeaking people from work they could otherwise
+do. Our theme is **independence through accessible technology**: SecondLook gives every operator more than
+one way to follow the task and control it.
+
 ## Why
 
-Duplo bricks are made for toddlers, so a damaged one should never reach a child. On many lines a person still
-checks parts by eye for hours, and attention drops over a shift. Automating that usually means a specialist
-programming a robot cell for each product. SecondLook is taught by demonstration and by example photos
-instead: show it the job, show it what "good" looks like, and it flags anything else.
+Many people with disabilities can do inspection work, but the job expects them to see, hear and speak.
+SecondLook removes that barrier:
+
+- **Can't see?** The robot speaks every result.
+- **Can't hear?** Every result appears on screen, with captions of everything the robot says.
+- **Can't speak?** Big buttons control the whole station.
+
+The robot does the looking and the handling. The person stays in charge.
 
 ## What it does
 
@@ -181,9 +196,18 @@ back to an earlier one.*
 
 ## Accessible by design
 
-Every result reaches the operator on two channels: large high-contrast text with screen-reader announcements,
-and a spoken voice. One key, a touch button or a USB foot pedal starts each inspection, so nobody needs to
-speak or use a mouse. Next, we want to test it with the people it is designed for.
+Operators can follow the same task in different ways:
+
+- **Blind or low-vision operators:** spoken updates announce results, destination bowls, progress and
+  retries, for example "Good brick. Pink bowl. Two left."
+- **Deaf or hard-of-hearing operators:** large high-contrast text, visible status messages and sorting
+  counters show what the robot is doing, with screen-reader announcements.
+- **Nonspeaking operators:** touch buttons, keyboard controls or a USB foot pedal start each inspection, so
+  nobody needs to speak or use a mouse.
+
+Bricks are our demonstration objects. Our longer-term goal is accessible quality inspection in workshops and
+production environments. SecondLook is a working prototype; testing it with the people it is designed for is
+our next step.
 
 ## How it is built
 
