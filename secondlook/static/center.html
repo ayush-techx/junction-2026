@@ -302,11 +302,11 @@ td.num,th.num{text-align:right}
       <div class="card">
         <div class="head"><h2>On this laptop</h2></div>
         <div class="facts">
-          <div class="fact"><div class="k">Inspection</div><div class="v" id="x-ins">12 ms</div></div>
-          <div class="fact"><div class="k">Pick model</div><div class="v" id="x-pol">9 ms</div></div>
+          <div class="fact"><div class="k">Inspection</div><div class="v" id="x-ins">–</div></div>
+          <div class="fact"><div class="k">Pick model</div><div class="v" id="x-pol">–</div></div>
           <div class="fact"><div class="k">Per brick</div><div class="v" id="x-cyc">–</div></div>
         </div>
-        <p class="sub" style="margin:12px 0 0">Intel Core Ultra · OpenVINO on the integrated GPU · no cloud</p>
+        <p class="sub" style="margin:12px 0 0" id="x-note">Intel Core Ultra · OpenVINO on the integrated GPU</p>
       </div>
     </div>
   </div>
@@ -550,6 +550,15 @@ async function poll() {
       const done = (c.good || 0) + (c.defective || 0), total = Math.max(L.table_start || 0, done + L.on_table);
       $("prog").hidden = !L.until_clear; $("prog-i").style.width = (total ? 100 * done / total : 0) + "%";
     } else if (!running) $("prog").hidden = true;
+    const tm = (s.model && s.model.timing) || {};       // last measured values; "–" until a run measures them
+    if (!L) {
+      $("x-ins").textContent = tm.anomaly_ms != null ? Math.round(tm.anomaly_ms) + " ms" : "–";
+      $("x-pol").textContent = tm.policy_ms != null ? Math.round(tm.policy_ms) + " ms" : "–";
+      $("x-cyc").textContent = tm.cycle_s != null ? Math.round(tm.cycle_s) + " s" : "–";
+    }
+    $("x-note").textContent = "Intel Core Ultra · OpenVINO on the integrated GPU · " +
+      (s.model && s.model.cloud ? "Gemini (cloud) only names defects for the voice" : "no cloud") +
+      (!L && tm.t ? ` · measured ${tm.t.slice(11)}` : !L ? " · times appear during a run" : "");
     if (L) {
       if (L.policy_ms != null) $("x-pol").textContent = Math.round(L.policy_ms) + " ms";
       if (L.anomaly_ms != null) $("x-ins").textContent = Math.round(L.anomaly_ms) + " ms";
@@ -606,7 +615,8 @@ async function loadScene() {
     const r = s.report;
     if (!r) return;
     sceneM = s.mtime;
-    const age = s.age_s < 90 ? "just now" : s.age_s < 3600 ? `${Math.round(s.age_s / 60)} min ago` : "earlier";
+    const age = s.age_s < 90 ? "just now" : s.age_s < 3600 ? `${Math.round(s.age_s / 60)} min ago`
+      : "at " + new Date(s.mtime * 1000).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) + (s.age_s > 1800 ? " (old: press Scan)" : "");
     const bricks = r.brick_list || [];
     $("t-sub").textContent = `${bricks.length} brick${bricks.length === 1 ? "" : "s"} · scanned ${age}`;
     if (!(S && S.live && S.live.on_table != null)) $("n-table").textContent = bricks.length;
@@ -765,7 +775,7 @@ async function loadModels() {
     toast(code === 200 ? "Saved. The next sort uses it." : (out.error || "Not saved")); loadModels();
   });
   const D = M.defect;
-  $("m-defect").innerHTML = `<dt>Model</dt><dd>PatchCore anomaly detection</dd><dt>Runs on</dt><dd>Intel GPU, OpenVINO fp16</dd>
+  $("m-defect").innerHTML = `<dt>Model</dt><dd>PatchCore anomaly detection</dd><dt>Runs on</dt><dd>${D.device === "GPU" ? "Intel GPU" : D.device === "NPU" ? "Intel NPU" : esc(D.device || "–")}, OpenVINO${/fp16|int8|fp32/.test(D.path || "") ? " " + D.path.match(/fp16|int8|fp32/)[0] : ""}</dd>
     <dt>Cut-off</dt><dd>${D.threshold} <span class="sub">(within ±${D.band} it takes a second look)</span></dd><dt>Trained</dt><dd>${esc(D.trained || "–")}</dd>
     <dt>Learns from</dt><dd>good bricks, plus every photo you label</dd>`;
   $("m-versions").innerHTML = D.versions.length ? D.versions.slice(0, 6).map(v => `<div class="ver"><span>${esc(v.when)} <span class="sub">cut-off ${v.threshold ?? "–"}</span></span><button class="btn sm" data-ver="${esc(v.id)}">Use this one</button></div>`).join("") : '<p class="sub">No earlier versions.</p>';
