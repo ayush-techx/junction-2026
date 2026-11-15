@@ -150,10 +150,13 @@ def status():
                 who = "SecondLook" if "secondlook" in cmd else "Studio" if "physicalai" in cmd else "other"
                 pid_list[i] = f"{who} ({pid})"
     pol_path = pol.get("path") or ""
+    pol_name = pol_path.split("models/")[-1].split("/")[0] if pol_path else None
+    if pol_name and len(pol_name) == 36:      # Studio model id (uuid): show the short form
+        pol_name = pol_name[:8]
     return {
         "job": _job_state(), "live": live,
         "model": {"inspection": ins.get("model"), "threshold": ins.get("threshold"), "band": ins.get("band"),
-                  "device": ins.get("device"), "policy": pol_path.split("/models/")[-1].split("/")[0][:8] if pol_path else None,
+                  "device": ins.get("device"), "policy": pol_name,
                   "policy_task": pol.get("task")},
         "data": {"good": cnt("data/bricks/good"), "defect": cnt("data/bricks/defect"),
                  "live_good": cnt("data/bricks_live/good"), "live_defect": cnt("data/bricks_live/defect")},
@@ -349,17 +352,27 @@ def models():
     except Exception:
         pass
     learned = []
-    for d in sorted(STUDIO_MODELS.glob("*/exports/openvino/manifest.json")):
-        mid = d.parts[-4]
+    active_real = os.path.realpath(ROOT / pol_path) if pol_path else ""
+    seen = set()
+    # models/<name>/ (downloaded with tools/fetch_models.sh, or symlinks) first, then Studio's own folder
+    found = [(d, d.parent.name, str(d.parent.relative_to(ROOT))) for d in sorted((ROOT / "models").glob("*/manifest.json"))]
+    found += [(d, d.parts[-4], str(d.parent)) for d in sorted(STUDIO_MODELS.glob("*/exports/openvino/manifest.json"))]
+    for d, mid, path in found:
+        real = os.path.realpath(d.parent)
+        if real in seen:
+            continue
+        seen.add(real)
         try:
             man = json.loads(d.read_text())
         except ValueError:
             continue
-        policy = (man.get("policy") or {}).get("name") or names.get(mid, {}).get("policy")
-        info = names.get(mid, {})
-        learned.append({"id": mid, "name": info.get("name") or policy.upper(), "policy": policy,
+        studio_id = Path(real).parts[-3] if real.startswith(str(STUDIO_MODELS)) else mid
+        policy = (man.get("policy") or {}).get("name") or names.get(studio_id, {}).get("policy") or "policy"
+        info = names.get(studio_id, {})
+        learned.append({"id": mid, "name": info.get("name") or (mid if path.startswith("models/") else policy.upper()),
+                        "policy": policy,
                         "created": info.get("created") or time.strftime("%Y-%m-%d %H:%M", time.localtime(d.stat().st_mtime)),
-                        "path": str(d.parent), "active": str(d.parent) == pol_path})
+                        "path": path, "active": real == active_real})
     engine = picker_engine()
     he = _yaml(ROOT / "secondlook" / "handeye.yaml").get("fit")
     ins = cfg.get("inspection") or {}

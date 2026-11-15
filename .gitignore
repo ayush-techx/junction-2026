@@ -1,67 +1,51 @@
-.claude/
+# --- Secrets -------------------------------------------------------------
+.env
+accessinspect/.env
+
+# --- Python environments and caches --------------------------------------
+anomalib-env/
+tts-env/
+.venv/
+venv/
+accessinspect/.venv/
 __pycache__/
-data/
-runs/
-exports/
+*.pyc
+
+# --- Models (too big for git: download with ./tools/fetch_models.sh) -----
+/models/
+/exports/
+/exports_*/
+/exports_before_recal_*/
+/demo/exports/
+**/weights/lightning/*.ckpt
+*.ckpt
+*.bin
+!voices/*.onnx
+
+# --- Training outputs ----------------------------------------------------
+/results/
+/demo/results/
+/demo/data/
+
+# --- Data: only the labelled brick photos are part of the repo -----------
+/data/*
+!/data/bricks/
+!/data/bricks_live/
+
+# --- Live run output (a curated snapshot lives in docs/results/) --------
+/runs/
+
+# --- Generated caches (accessinspect/voice_cache is kept: offline voice) --
+accessinspect/defect_cache.json
+*.part
+
+# --- Backups and local tooling -------------------------------------------
+*.bak
+*.bak_*
+*.prev
+*.orig
 *.zip
 junction2026_*/
 IMG*.jpg
 IMG*.webp
-accessinspect/.env
-accessinspect/.venv/
-
-# Python environments
-anomalib-env/
-.venv/
-venv/
-
-# Generated voice cache
-**/voice_cache/
-*.part
-
-# Backup files
-*.bak
-*.bak_*
-*.prev
-*.orig
-
-# Generated model exports
-exports/
-exports_*/
-exports_before_recal_*/
-
-# Model checkpoints and binaries
-**/weights/lightning/*.ckpt
-**/weights/openvino/*.bin
-
-# Python cache
-*.pyc
-__pycache__/
-
-
-# Virtual environments
-/anomalib-env/
-/.venv/
-/venv/
-
-# All generated model exports
-/exports*/
-/demo/exports/
-
-# Generated training results
-/results/
-/demo/results/
-
-# Model checkpoints
-*.ckpt
-*.bin
-
-# Generated caches
-**/voice_cache/
-*.part
-
-# Backups
-*.bak
-*.bak_*
-*.prev
-*.orig
+.claude/

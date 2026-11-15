@@ -1,0 +1,5 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+00:45:52,handfed_eval_0044,1,normal,,,,0,,,,,,handfed,
+00:46:09,handfed_eval_0044,2,normal,defective,defective,defective,1,0,12.67,0.7812,,0.486,handfed,
+00:47:07,handfed_eval_0044,3,normal,good,good,good,1,0,50.57,0.0581,,0.486,handfed,
+00:47:27,handfed_eval_0044,4,normal,defective,defective,defective,1,0,18.23,0.79,,0.486,handfed,

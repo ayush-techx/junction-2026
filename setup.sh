@@ -16,23 +16,32 @@ if ! command -v uv >/dev/null; then
   exit 1
 fi
 
-echo "[1/5] App libraries into the Studio venv"
+echo "[1/7] App libraries into the Studio venv"
 uv pip install --python "$STUDIO_PY" -r requirements.txt
 
-echo "[2/5] Anomaly training environment (anomalib-env)"
+echo "[2/7] Anomaly training environment (anomalib-env)"
 [ -x anomalib-env/bin/python ] || uv venv --python 3.12 anomalib-env
 uv pip install --python anomalib-env/bin/python "anomalib[openvino,xpu]"
 
-echo "[3/5] Offline voice (asks for your password)"
+echo "[3/7] Offline voice: Piper neural TTS (tts-env) + espeak-ng fallback (asks for your password)"
+[ -x tts-env/bin/piper ] || uv venv --python 3.12 tts-env
+uv pip install --python tts-env/bin/python "piper-tts==1.8.0"
 command -v espeak-ng >/dev/null || sudo apt-get install -y espeak-ng
 
-echo "[4/5] Serial port access"
+echo "[4/7] Serial port access"
 if ! id -nG | grep -qw dialout; then
   sudo usermod -aG dialout "$USER"
   echo "      Added you to the dialout group. Log out and back in once before using the arm."
 fi
 
-echo "[5/5] Self-test"
+echo "[5/7] Trained models from the GitHub release (defect model + ACT v3)"
+./tools/fetch_models.sh || echo "      Skipped: run ./tools/fetch_models.sh after 'gh auth login'."
+
+echo "[6/7] Optional: AccessInspect voice + Gemini helper (own venv)"
+[ -x accessinspect/.venv/bin/python ] || uv venv --python 3.12 accessinspect/.venv
+uv pip install --python accessinspect/.venv/bin/python -r accessinspect/requirements.txt
+
+echo "[7/7] Self-test"
 chmod +x sl
 "$STUDIO_PY" -m unittest discover tests
 

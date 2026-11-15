@@ -1,0 +1,8 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+03:58:27,sort_0357,1,normal,,uncertain,defective,1,1,30.96,0.5488,0.5356,0.486,scan,gemini=none/green gemini_disagrees
+03:58:47,sort_0357,2,normal,,,,0,,,,,,scan,
+03:59:09,sort_0357,3,normal,,,,0,,,,,,scan,
+03:59:35,sort_0357,4,normal,,defective,defective,1,0,25.93,0.6421,,0.486,scan,gemini=none/blue gemini_disagrees
+03:59:58,sort_0357,5,normal,,,,0,,,,,,scan,
+04:00:21,sort_0357,6,normal,,,,0,,,,,,scan,
+04:00:23,sort_0357,7,normal,,,,0,,,,,,scan,

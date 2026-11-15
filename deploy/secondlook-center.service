@@ -1,0 +1,16 @@
+# Copy to ~/.config/systemd/user/ and run: systemctl --user enable --now secondlook-center
+# WorkingDirectory assumes the repo is at ~/Downloads/secondlook; change it if you cloned elsewhere.
+[Unit]
+Description=SecondLook control center (dashboard on http://127.0.0.1:8770)
+After=graphical-session.target
+
+[Service]
+WorkingDirectory=%h/Downloads/secondlook
+ExecStart=%h/physical-ai-studio/application/backend/.venv/bin/python -m secondlook.center 8770
+Environment=PYTHONUNBUFFERED=1
+Environment=DISPLAY=:0
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target

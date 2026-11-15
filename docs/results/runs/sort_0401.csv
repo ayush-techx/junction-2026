@@ -1,0 +1,7 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+04:01:33,sort_0401,1,normal,,,,0,,,,,,scan,
+04:02:20,sort_0401,2,normal,,,,0,,,,,,scan,
+04:02:47,sort_0401,3,normal,,defective,defective,1,0,27.21,0.7837,,0.486,scan,gemini=sticker/blue
+04:02:49,sort_0401,4,normal,,,,0,,,,,,scan,
+04:03:03,sort_0401,5,normal,,,,0,,,,,,scan,
+04:03:05,sort_0401,6,normal,,,,0,,,,,,scan,

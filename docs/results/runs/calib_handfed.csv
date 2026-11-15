@@ -1,0 +1,13 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+23:54:46,calib_handfed,1,normal,good,good,good,1,0,71.36,0.252,,0.5,handfed,
+23:55:10,calib_handfed,2,normal,defective,defective,defective,1,0,23.67,0.666,,0.5,handfed, truth corrected: real defect (was auto-labelled good)
+23:55:35,calib_handfed,3,normal,,,,0,,,,,,handfed,
+23:55:50,calib_handfed,4,normal,defective,defective,defective,1,0,15.13,0.8062,,0.5,handfed, truth corrected: real defect (was auto-labelled good)
+23:56:05,calib_handfed,5,normal,defective,defective,defective,1,0,14.37,0.5747,,0.5,handfed, truth corrected: real defect (was auto-labelled good)
+23:56:29,calib_handfed,6,normal,,,,0,,,,,,handfed,
+23:57:25,calib_handfed,7,normal,,,,0,,,,,,handfed,
+23:58:31,calib_handfed,8,normal,good,good,good,1,0,11.08,0.3882,,0.5,handfed,
+23:59:09,calib_handfed,9,normal,good,uncertain,defective,1,1,38.4,0.3074,,0.353,handfed,
+23:59:27,calib_handfed,10,normal,good,good,good,1,0,17.19,0.0538,,0.353,handfed,
+00:05:11,calib_handfed,11,normal,good,defective,defective,1,0,344.49,0.5586,,0.353,handfed,
+00:05:28,calib_handfed,12,normal,good,good,good,1,0,16.44,0.0,,0.353,handfed,

@@ -1,0 +1,3 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+03:34:43,sort_0334,1,normal,,defective,defective,1,0,16.44,0.5991,,0.486,scan,gemini=none/blue gemini_disagrees
+03:35:00,sort_0334,2,normal,,defective,defective,1,0,16.29,0.5718,,0.486,scan,gemini=none/orange gemini_disagrees

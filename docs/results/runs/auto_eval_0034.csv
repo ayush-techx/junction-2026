@@ -1,0 +1,11 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+00:35:01,auto_eval_0034,1,normal,,,,0,,,,,,act,
+00:35:36,auto_eval_0034,2,normal,,,,0,,,,,,act,
+00:36:04,auto_eval_0034,3,normal,,,,0,,,,,,act,
+00:36:41,auto_eval_0034,4,normal,,,,0,,,,,,act,
+00:37:40,auto_eval_0034,5,normal,good,defective,defective,1,1,56.11,0.561,0.6279,0.486,act,
+00:38:13,auto_eval_0034,6,normal,,,,0,,,,,,act,
+00:38:42,auto_eval_0034,7,normal,defective,defective,defective,1,0,23.71,0.7607,,0.486,act,
+00:39:22,auto_eval_0034,8,normal,,,,0,,,,,,act,
+00:40:01,auto_eval_0034,9,normal,,,,0,,,,,,act,
+00:40:39,auto_eval_0034,10,normal,,,,0,,,,,,act,

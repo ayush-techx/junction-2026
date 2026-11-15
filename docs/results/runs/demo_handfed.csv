@@ -1,0 +1,9 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+21:00:00,demo_handfed,1,normal,,,,0,,,,,,handfed,
+21:00:17,demo_handfed,2,normal,,defective,defective,1,0,17.35,0.897,,0.5,handfed,
+21:00:43,demo_handfed,3,normal,,,,0,,,,,,handfed,
+21:01:13,demo_handfed,4,normal,,good,good,1,0,29.62,0.0556,,0.5,handfed,
+21:01:43,demo_handfed,5,normal,,good,good,1,0,30.57,0.4424,,0.5,handfed,
+21:02:14,demo_handfed,6,normal,,defective,defective,1,0,30.28,0.7334,,0.5,handfed,
+21:02:37,demo_handfed,7,normal,,good,good,1,0,22.92,0.3235,,0.5,handfed,
+21:13:52,demo_handfed,8,normal,,good,good,1,0,675.45,0.0,,0.5,handfed,

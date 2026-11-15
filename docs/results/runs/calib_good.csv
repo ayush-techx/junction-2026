@@ -1,0 +1,8 @@
+ts,run,trial,layout,truth,verdict,final_bowl,pick_ok,regrasps,cycle_s,score_v1,score_v2,thr,policy,notes
+23:49:12,calib_good,1,normal,,,,0,,,,,,act,
+23:49:39,calib_good,2,normal,,,,0,,,,,,act,
+23:50:20,calib_good,3,normal,,,,0,,,,,,act,
+23:50:48,calib_good,4,normal,good,defective,defective,1,0,28.23,0.6484,,0.5,act,
+23:51:17,calib_good,5,normal,,,,0,,,,,,act,
+23:51:47,calib_good,6,normal,,,,0,,,,,,act,
+23:52:02,calib_good,7,normal,good,defective,defective,1,0,15.79,0.7598,,0.5,act,

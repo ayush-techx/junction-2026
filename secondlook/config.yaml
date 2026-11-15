@@ -20,7 +20,7 @@ cameras:                           # names must match the names used when record
   wrist: {type: opencv, path: /dev/v4l/by-id/usb-Sonix_Technology_Co.__Ltd._USB2.0_CAM1_USB2.0_CAM1-video-index0, width: 640, height: 480, fps: 30}
 
 policy:
-  path: /home/intel/.local/share/physicalai/models/918242dc-9a06-48fa-9c45-b5890e428a94/exports/openvino                       # PLACEHOLDER: exported OpenVINO policy folder (Modal-trained ACT)
+  path: models/act_v3                    # learned pick policy (OpenVINO). ./tools/fetch_models.sh puts act_v3, act_20ep, smolvla_20k in models/
   device: GPU                      # where the pick model runs (GPU = Intel iGPU, ~18x faster than CPU for SmolVLA)
   cameras: [top, side, wrist]      # cameras the policy was trained with, same names
   max_seconds: 15                  # give up a pick after this long
@@ -32,8 +32,8 @@ policy:
 
 inspection:
   camera: wrist                    # wrist camera sees the held brick close-up at a fixed offset
-  model: exports/patchcore/fp16/weights/openvino/model.xml                      # PLACEHOLDER: exports/padim/int8/weights/openvino/model.xml
-  device: GPU                      # NPU, then GPU, then CPU if compile fails
+  model: exports/patchcore/fp16/weights/openvino/model.xml   # PatchCore FP16 trained on clean bricks (./tools/fetch_models.sh)
+  device: GPU                      # GPU; NPU crashes with this laptop's driver (ZE_RESULT_ERROR_UNKNOWN)
   roi: [170, 240, 300, 240]          # [x, y, w, h] crop around the held brick (same crop as the wrist_v0 set); retune from a `check` snapshot
   threshold: 0.486                   # exported Anomalib scores are normalised; 0.5 = decision threshold
   band: 0.08                       # +- uncertain zone; uncertain triggers the second look
