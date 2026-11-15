@@ -6,7 +6,7 @@ one Intel Core Ultra laptop.**
 
 Built at Junction 2026 for the **Ignite Next × Intel Physical AI Challenge**.
 
-**[▶ Watch the 2-minute video](https://www.youtube.com/watch?v=Hmoqj57VKXk)** ·
+**[▶ Watch the 2-minute video](https://youtu.be/S4IuWnl2aAo?is=rWpl7n40N_tJgDss)** ·
 **[Trained models (release)](https://github.com/ayush-techx/junction-2026/releases/tag/models-v1)** ·
 **[Station setup guide](docs/SETUP.md)**
 
