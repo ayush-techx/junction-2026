@@ -35,7 +35,7 @@ if ! id -nG | grep -qw dialout; then
 fi
 
 echo "[5/7] Trained models from the GitHub release (defect model + ACT v3)"
-./tools/fetch_models.sh || echo "      Skipped: run ./tools/fetch_models.sh after 'gh auth login'."
+./tools/fetch_models.sh || echo "      Skipped: run ./tools/fetch_models.sh once you are online."
 
 echo "[6/7] Optional: AccessInspect voice + Gemini helper (own venv)"
 [ -x accessinspect/.venv/bin/python ] || uv venv --python 3.12 accessinspect/.venv

@@ -61,6 +61,8 @@ class TestEvalLog(unittest.TestCase):
             self.assertEqual(s["caught only by second view"], 1)
             self.assertEqual(s["re-grasps"], 1)
             self.assertEqual(s["cycle time median / p90"], "11.0 s / 12.0 s")
+            unlabelled = eval_log.summarize([{"pick_ok": "1", "final_bowl": "good", "truth": ""}])
+            self.assertEqual(unlabelled["sort accuracy (of picked)"], "n/a")
 
 
 class TestPower(unittest.TestCase):

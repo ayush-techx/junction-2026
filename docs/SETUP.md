@@ -17,8 +17,7 @@ Two Python environments are used, and `./sl` picks the right one for you:
 ## 1. Clone and install (once, ~10 minutes)
 
 ```bash
-gh auth login                      # the repo and its model release are private
-gh repo clone ayush-techx/junction-2026 ~/secondlook && cd ~/secondlook
+git clone https://github.com/ayush-techx/junction-2026.git ~/secondlook && cd ~/secondlook
 ```
 ```bash
 ./setup.sh

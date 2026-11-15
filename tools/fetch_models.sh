@@ -4,7 +4,7 @@
 #   ./tools/fetch_models.sh            defect models + ACT v3 (what the default config uses, ~360 MB)
 #   ./tools/fetch_models.sh --all      also ACT 20ep and SmolVLA 20k (~1.1 GB)
 #
-# The repo is private, so this uses the GitHub CLI (`gh auth login` once) or a token in GITHUB_TOKEN.
+# Works without a login (public release). Uses the GitHub CLI or GITHUB_TOKEN when available.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -39,8 +39,7 @@ fetch() {  # fetch <asset>
     curl -fL -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/octet-stream" \
       -o "$DL/$1" "https://api.github.com/repos/$REPO/releases/assets/$id"
   else
-    echo "Need the GitHub CLI (gh auth login) or GITHUB_TOKEN to download from the private repo." >&2
-    exit 1
+    curl -fL -o "$DL/$1" "https://github.com/$REPO/releases/download/$TAG/$1"
   fi
 }
 

@@ -54,7 +54,8 @@ def _f(x):
 def summarize(rows):
     n = len(rows)
     picked = [r for r in rows if r.get("pick_ok") in ("1", "True", "true")]
-    sorted_ok = [r for r in picked if r.get("truth") and r.get("final_bowl") == r["truth"]]
+    labelled = [r for r in picked if r.get("truth")]  # accuracy only where ground truth was recorded
+    sorted_ok = [r for r in labelled if r.get("final_bowl") == r["truth"]]
     conf = {(t, p): 0 for t in ("good", "defective") for p in ("good", "defective")}
     for r in picked:
         if (r.get("truth"), r.get("final_bowl")) in conf:
@@ -71,7 +72,7 @@ def summarize(rows):
     out = {
         "trials": n,
         "pick success": pct(len(picked), n),
-        "sort accuracy (of picked)": pct(len(sorted_ok), len(picked)),
+        "sort accuracy (of picked)": pct(len(sorted_ok), len(labelled)),
         "defects caught (recall)": pct(conf[("defective", "defective")], defects),
         "good bricks wrongly rejected": pct(conf[("good", "defective")], goods),
         "defects missed": conf[("defective", "good")],
