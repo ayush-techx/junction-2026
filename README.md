@@ -178,6 +178,15 @@ off for a fully offline station.
 A day-by-day log of decisions and open problems is in [docs/ENGINEERING_LOG.md](docs/ENGINEERING_LOG.md).
 The pitch scripts are in [docs/pitch.md](docs/pitch.md).
 
+## Team
+
+| Name | Email |
+|---|---|
+| Kashish Charaya (team lead) | kashishcharaya00@gmail.com |
+| Ayush Kumar | ayushhh134@gmail.com |
+| Madhuri Gade | madhurigade000@gmail.com |
+| Sofia Ivanova | iv.safya@gmail.com |
+
 ## License
 
 MIT
