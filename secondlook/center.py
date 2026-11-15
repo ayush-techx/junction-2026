@@ -506,6 +506,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path in ("/", "/index.html"):
                 return self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
+            if path == "/config.js":                 # private control center: not the public view-only mode
+                return self._send(200, b"window.SL_PUBLIC = null;\n", "text/javascript; charset=utf-8")
             if path == "/access.js":
                 return self._send(200, PAGE.with_name("access.js").read_bytes(), "text/javascript; charset=utf-8")
             if path == "/api/aac":

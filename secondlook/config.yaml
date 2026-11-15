@@ -75,4 +75,9 @@ accessinspect:                     # teammate module in accessinspect/ (own venv
 power:
   idle_watts: null                 # measured by `check` with the arm idle; HUD shows watts above this
 
+public:                            # public read-only dashboard (docs/PUBLIC_DASHBOARD.md)
+  viewer_port: 8772                # ./sl viewer; the tunnel points here, never at the control center (8770)
+  api_url: null                    # the tunnel URL, e.g. https://<laptop>.<tailnet>.ts.net (tailscale funnel status)
+  netlify_site: null               # Netlify site name, used by ./sl publish --deploy
+
 log_dir: runs

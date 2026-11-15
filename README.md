@@ -150,6 +150,9 @@ gh repo clone ayush-techx/junction-2026 secondlook && cd secondlook
 The control center runs as a user service: `cp deploy/secondlook-center.service ~/.config/systemd/user/ &&
 systemctl --user enable --now secondlook-center`. It is then at http://127.0.0.1:8770.
 
+**Public dashboard:** a read-only copy of the control center for visitors, live while the station is on and
+showing the last data when it is off. Setup: [docs/PUBLIC_DASHBOARD.md](docs/PUBLIC_DASHBOARD.md).
+
 **Hardware:** SO-101 follower arm (7.4 V servos, so use the **5 V** supply), two RealSense D4xx cameras (top
 and side), a USB wrist camera, and an Intel Core Ultra laptop. Only one program may hold the arm and cameras
 at a time (Studio *or* SecondLook).

@@ -23,6 +23,8 @@ case "$cmd" in
   recalibrate) exec tools/recalibrate.sh ;;
   voice)    exec "$STUDIO_PY" -m secondlook.announce ;;
   test)     exec "$STUDIO_PY" -m unittest discover tests -v ;;
+  viewer)   exec "$STUDIO_PY" -m secondlook.viewer "$@" ;;
+  publish)  exec "$STUDIO_PY" tools/publish_site.py "$@" ;;
   *)
     cat <<'EOF'
 SecondLook
@@ -47,6 +49,8 @@ SecondLook
   ./sl prepare --src <frames> --out <folder> --roi X Y W H
   ./sl voice                         test the speaker
   ./sl test                          run the test suite
+  ./sl viewer                        public read-only dashboard on :8772 (put the tunnel on this, never on :8770)
+  ./sl publish [--deploy]            build the Netlify page + last data snapshot (--deploy uploads it)
 
 Full guide: docs/SETUP.md   Models: ./tools/fetch_models.sh
 EOF
