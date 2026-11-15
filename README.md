@@ -7,6 +7,7 @@ one Intel Core Ultra laptop.**
 Built at Junction 2026 for the **Ignite Next × Intel Physical AI Challenge**.
 
 **[▶ Watch the 2-minute video](https://www.youtube.com/watch?v=Hmoqj57VKXk)** ·
+**[Live dashboard](https://secondlook-junction.netlify.app)** ·
 **[Trained models (release)](https://github.com/ayush-techx/junction-2026/releases/tag/models-v1)** ·
 **[Station setup guide](docs/SETUP.md)**
 
@@ -245,8 +246,8 @@ SmolVLA). No GitHub login is needed.
 The control center runs as a user service: `cp deploy/secondlook-center.service ~/.config/systemd/user/ &&
 systemctl --user enable --now secondlook-center`. It is then at http://127.0.0.1:8770.
 
-**Public dashboard:** a read-only copy of the control center for visitors, live while the station is on and
-showing the last data when it is off. Setup: [docs/PUBLIC_DASHBOARD.md](docs/PUBLIC_DASHBOARD.md).
+**Public dashboard: [secondlook-junction.netlify.app](https://secondlook-junction.netlify.app)**, a read-only copy of the
+control center for visitors, live while the station is on and showing the last data when it is off. Setup: [docs/PUBLIC_DASHBOARD.md](docs/PUBLIC_DASHBOARD.md).
 
 **Hardware:** SO-101 follower arm (7.4 V servos, so use the **5 V** supply), two RealSense D4xx cameras (top
 and side), a USB wrist camera, and an Intel Core Ultra laptop. Only one program may hold the arm and cameras
